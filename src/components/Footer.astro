@@ -1,13 +1,12 @@
 ---
-import { activeSocials, site } from '../config/site';
-import Icon from './Icon.astro';
+import { site } from '../config/site';
+import SocialLinks from './SocialLinks.astro';
 
-const socials = activeSocials();
 const year = new Date().getFullYear();
 ---
 
 <footer class="mt-10 border-t border-white/8">
-  <div class="container-site flex flex-col items-center gap-6 py-8 sm:flex-row sm:gap-0">
+  <div class="container-site flex flex-col items-center gap-6 py-8 md:flex-row md:gap-0">
     <a href="/" class="shrink-0 rounded-md" aria-label={`${site.name} – back to top`}>
       <img
         src="/images/logo-wordmark.webp"
@@ -20,24 +19,13 @@ const year = new Date().getFullYear();
       />
     </a>
 
-    <div class="text-center sm:ml-10 sm:border-l sm:border-white/15 sm:pl-10 sm:text-left">
+    <div class="text-center md:ml-10 md:border-l md:border-white/15 md:pl-10 md:text-left">
       <p class="text-lg font-bold">{site.name}</p>
       <p class="mt-1 text-sm text-muted">{site.tagline}</p>
       <p class="mt-2 text-xs text-muted/80">© <span data-year>{year}</span> {site.name}. All rights reserved.</p>
     </div>
 
-    <ul class="flex items-center gap-5 sm:ml-auto" aria-label="Social media">
-      {
-        socials.map((s) => (
-          <li>
-            <a href={s.url} class="grid place-items-center p-1 text-white transition-colors hover:text-neon-cyan" target="_blank" rel="noopener">
-              <Icon name={s.id} class="size-7" />
-              <span class="sr-only">{s.label} (opens in a new tab)</span>
-            </a>
-          </li>
-        ))
-      }
-    </ul>
+    <SocialLinks variant="footer" class="flex-wrap justify-center md:ml-auto" />
   </div>
 
   <div class="container-site pb-6" aria-hidden="true">
