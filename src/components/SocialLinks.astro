@@ -1,0 +1,137 @@
+---
+/**
+ * Social profile links from the central config (src/config/site.ts).
+ * `header`: icon row on desktop, labelled two-column grid inside the mobile menu.
+ * `footer`: compact icon row.
+ */
+import { activeSocials } from '../config/site';
+import Icon from './Icon.astro';
+
+interface Props {
+  variant: 'header' | 'footer';
+  class?: string;
+}
+
+const { variant, class: className } = Astro.props;
+const socials = activeSocials();
+---
+
+{
+  socials.length > 0 && (
+    <ul class:list={['socials', `socials-${variant}`, className]} aria-label="Social media">
+      {socials.map((s) => (
+        <li>
+          <a href={s.url} class="social-link" target="_blank" rel="noopener noreferrer">
+            <Icon name={s.id} class="social-icon" />
+            <span class="social-label">{s.label}</span>
+            <span class="sr-only"> (opens in a new tab)</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+<style>
+  .socials {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .social-link {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 8px;
+    color: rgb(255 255 255 / 0.88);
+    transition:
+      color 0.2s,
+      background-color 0.2s;
+  }
+  .social-link:hover,
+  .social-link:focus-visible {
+    color: var(--color-neon-cyan);
+    background-color: rgb(35 217 245 / 0.08);
+  }
+  /* Small pink indicator, matching the active nav underline */
+  .social-link::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 0.1rem;
+    width: 0.9rem;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--color-neon-pink);
+    opacity: 0;
+    transform: translateX(-50%) scaleX(0.4);
+    transition:
+      opacity 0.2s,
+      transform 0.2s;
+  }
+  .social-link:hover::after,
+  .social-link:focus-visible::after {
+    opacity: 1;
+    transform: translateX(-50%) scaleX(1);
+  }
+
+  .social-link :global(.social-icon) {
+    width: 1.3rem;
+    height: 1.3rem;
+  }
+
+  /* Label is visually hidden in icon rows but always part of the accessible name */
+  .social-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .socials-header .social-link {
+    text-shadow: none;
+    filter: drop-shadow(0 1px 6px rgb(0 0 0 / 0.55));
+  }
+
+  /* Mobile menu: labelled two-column grid with 44px touch targets */
+  @media (max-width: 767.98px) {
+    .socials-header {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.25rem;
+    }
+    .socials-header .social-link {
+      display: flex;
+      justify-content: flex-start;
+      gap: 0.65rem;
+      width: 100%;
+      height: 2.75rem;
+      padding-inline: 0.75rem;
+      filter: none;
+    }
+    .socials-header .social-link::after {
+      left: 0.75rem;
+      bottom: 0.3rem;
+      transform: scaleX(0.4);
+      transform-origin: left;
+    }
+    .socials-header .social-link:hover::after,
+    .socials-header .social-link:focus-visible::after {
+      transform: scaleX(1);
+    }
+    .socials-header .social-label {
+      position: static;
+      width: auto;
+      height: auto;
+      overflow: visible;
+      clip-path: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+  }
+</style>

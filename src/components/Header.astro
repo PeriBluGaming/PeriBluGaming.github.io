@@ -1,8 +1,7 @@
 ---
-import { activeSocials, navLinks, site } from '../config/site';
+import { navLinks, site } from '../config/site';
 import Icon from './Icon.astro';
-
-const socials = activeSocials();
+import SocialLinks from './SocialLinks.astro';
 ---
 
 <header class="absolute inset-x-0 top-0 z-30">
@@ -44,18 +43,7 @@ const socials = activeSocials();
             ))
           }
         </ul>
-        <ul class="nav-socials" aria-label="Social media">
-          {
-            socials.map((s) => (
-              <li>
-                <a href={s.url} class="social-link" rel="noopener" target="_blank">
-                  <Icon name={s.id} class="size-[26px]" />
-                  <span class="sr-only">{s.label} (opens in a new tab)</span>
-                </a>
-              </li>
-            ))
-          }
-        </ul>
+        <SocialLinks variant="header" class="nav-socials" />
       </div>
     </nav>
   </div>
@@ -131,22 +119,6 @@ const socials = activeSocials();
     opacity: 1;
   }
 
-  .nav-socials {
-    display: flex;
-    align-items: center;
-    gap: 1.1rem;
-  }
-  .social-link {
-    display: grid;
-    place-items: center;
-    padding: 0.25rem;
-    color: #fff;
-    transition: color 0.2s;
-  }
-  .social-link:hover {
-    color: var(--color-neon-cyan);
-  }
-
   .nav-toggle {
     display: grid;
     place-items: center;
@@ -173,7 +145,7 @@ const socials = activeSocials();
     .nav-menu {
       display: flex;
       align-items: center;
-      gap: 4.5rem;
+      gap: clamp(1.5rem, 4vw, 3.5rem);
     }
   }
 
@@ -186,7 +158,7 @@ const socials = activeSocials();
       position: absolute;
       right: 0;
       top: calc(100% + 0.6rem);
-      min-width: 13rem;
+      width: min(19rem, calc(100vw - 2rem));
       padding: 0.75rem;
       border-radius: 12px;
       background: rgb(14 17 33 / 0.96);
@@ -215,7 +187,7 @@ const socials = activeSocials();
     }
     .nav-socials {
       margin-top: 0.5rem;
-      padding: 0.75rem 0.5rem 0.25rem;
+      padding-top: 0.5rem;
       border-top: 1px solid var(--color-line);
     }
   }
