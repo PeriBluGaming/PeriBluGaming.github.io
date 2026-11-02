@@ -31,10 +31,14 @@ export const categories: Category[] = [
 /** Repositories without an override end up here. */
 export const defaultCategory: CategoryId = 'other';
 
+/** Screenshot for a featured project card. See docs/project-screenshots.md. */
 export interface ProjectImage {
-  /** Path below /public, e.g. "/images/projects/toy-story-2.webp". */
+  /** File below public/images/projects/, e.g. "/images/projects/<project>/<file>.webp". Checked at build time. */
   src: string;
+  /** Describes what the screenshot shows. */
   alt: string;
+  /** CSS object-position for the 16:9 crop, e.g. "center", "top", "50% 30%". Default: "center". */
+  position?: string;
 }
 
 export interface ProjectOverride {
@@ -44,8 +48,6 @@ export interface ProjectOverride {
   category?: CategoryId;
   /** Max. two tags are shown on cards (e.g. platform + type). */
   tags?: string[];
-  /** Optional own artwork/screenshot; replaces the stylised platform art. */
-  image?: ProjectImage;
   /** Exclude this repository from the site entirely. */
   hidden?: boolean;
 }
@@ -99,6 +101,8 @@ export const projectOverrides: Record<string, ProjectOverride> = {
 export interface FeaturedEntry {
   repo: string;
   accent: Accent;
+  /** Optional screenshot. Without it the card shows the stylised platform art. */
+  image?: ProjectImage;
 }
 
 /** Featured projects in display order – independent of GitHub sorting. */

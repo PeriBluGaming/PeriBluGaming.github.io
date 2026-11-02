@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import {
   categories,
   defaultCategory,
@@ -13,6 +14,7 @@ import {
 import { site } from '../config/site';
 import fallback from '../data/fallback-repos.json';
 import { fetchPublicRepos, GitHubApiError, type RepoData } from './github';
+import { validateProjectImage } from './project-image';
 
 export interface Project {
   name: string;
@@ -27,11 +29,12 @@ export interface Project {
   fork: boolean;
   archived: boolean;
   featured: boolean;
-  image?: ProjectImage;
 }
 
 export interface FeaturedProject extends Project {
   accent: Accent;
+  /** Validated screenshot; absent = stylised platform art. */
+  image?: ProjectImage;
 }
 
 export interface ProjectData {
@@ -67,7 +70,6 @@ function toProject(repo: RepoData): Project {
     fork: repo.fork,
     archived: repo.archived,
     featured: featuredOrder.has(key(repo.name)),
-    image: o.image,
   };
 }
 
@@ -101,8 +103,10 @@ async function build(): Promise<ProjectData> {
   const featured: FeaturedProject[] = [];
   for (const [name, entry] of featuredOrder) {
     const project = projects.find((p) => key(p.name) === name);
-    if (project) featured.push({ ...project, accent: entry.accent });
-    else console.warn(`[projects] Featured repository "${entry.repo}" is not publicly available – skipped.`);
+    if (project) {
+      const image = entry.image && validateProjectImage(entry.image, entry.repo, join(process.cwd(), 'public'));
+      featured.push({ ...project, accent: entry.accent, ...(image && { image }) });
+    } else console.warn(`[projects] Featured repository "${entry.repo}" is not publicly available – skipped.`);
   }
 
   // Featured projects bypass the fork/archive filters so they never go missing.
