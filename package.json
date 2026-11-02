@@ -12,6 +12,7 @@
     "preview": "astro preview",
     "check": "astro check",
     "snapshot": "node scripts/update-fallback.ts",
+    "test": "node --test \"tests/**/*.test.ts\"",
     "astro": "astro"
   },
   "dependencies": {

@@ -22,12 +22,14 @@ npm install
 | `npm run build`    | Type check (`astro check`) + production build into `dist/`       |
 | `npm run preview`  | Serve the production build locally                               |
 | `npm run snapshot` | Refresh `src/data/fallback-repos.json` from the live GitHub API  |
+| `npm test`         | Unit tests (Node's built-in test runner)                         |
 
 ## Project data
 
-- `src/config/projects.ts` – featured projects (order + accent), categories, per-repo title/description/tags,
-  optional `image`, exclusions, fork/archive filters.
-- `src/config/site.ts` – site metadata and social links (empty URL = hidden).
+- `src/config/projects.ts` – featured projects (order, accent, optional screenshot), categories,
+  per-repo title/description/tags, exclusions, fork/archive filters.
+  Adding screenshots: [docs/project-screenshots.md](docs/project-screenshots.md).
+- `src/config/site.ts` – site metadata and social links (`enabled: false` = hidden).
 - `src/data/fallback-repos.json` – real API snapshot used when GitHub is unreachable or rate-limited.
 
 ### Environment variables (optional, build time only)
