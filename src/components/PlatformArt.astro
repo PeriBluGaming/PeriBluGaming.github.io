@@ -1,0 +1,96 @@
+---
+/**
+ * Stylised neon line artwork used instead of (copyrighted) box art.
+ * Generic shapes only – no console logos or trademarks.
+ */
+import type { ArtKind } from '../config/projects';
+
+interface Props {
+  kind: ArtKind;
+  class?: string;
+}
+
+const { kind, class: className = '' } = Astro.props;
+const id = `art-${kind}-${Math.random().toString(36).slice(2, 8)}`;
+---
+
+<svg
+  viewBox="0 0 160 120"
+  class:list={['platform-art', className]}
+  fill="none"
+  stroke={`url(#${id})`}
+  stroke-width="3"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  aria-hidden="true"
+  focusable="false"
+>
+  <defs>
+    <linearGradient id={id} x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#23d9f5" />
+      <stop offset="0.55" stop-color="#9365ea" />
+      <stop offset="1" stop-color="#f235a5" />
+    </linearGradient>
+  </defs>
+
+  {
+    kind === 'disc' && (
+      <g>
+        <circle cx="80" cy="60" r="46" />
+        <circle cx="80" cy="60" r="17" />
+        <circle cx="80" cy="60" r="6" />
+        <path d="M80 26a34 34 0 0 1 30 18" stroke-width="2.5" opacity="0.8" />
+        <path d="M50 76a34 34 0 0 0 16 14" stroke-width="2.5" opacity="0.6" />
+      </g>
+    )
+  }
+
+  {
+    kind === 'cartridge' && (
+      <g>
+        <path d="M44 14h72a6 6 0 0 1 6 6v80a6 6 0 0 1-6 6H44a6 6 0 0 1-6-6V20a6 6 0 0 1 6-6z" />
+        <path d="M52 14v10h56V14" />
+        <path d="M60 19h4M70 19h4M80 19h4M90 19h4" stroke-width="2" />
+        <rect x="52" y="34" width="56" height="42" rx="4" />
+        <path d="M62 48h36M62 58h24" stroke-width="2.5" opacity="0.8" />
+        <path d="M54 94h52" opacity="0.7" />
+      </g>
+    )
+  }
+
+  {
+    kind === 'handheld' && (
+      <g>
+        <rect x="18" y="26" width="124" height="68" rx="14" />
+        <path d="M44 26v68M116 26v68" />
+        <rect x="52" y="35" width="56" height="50" rx="4" />
+        <circle cx="31" cy="46" r="6" />
+        <path d="M27 72h8M31 68v8" stroke-width="2.5" />
+        <circle cx="129" cy="70" r="6" />
+        <circle cx="125" cy="44" r="2" />
+        <circle cx="133" cy="44" r="2" />
+        <circle cx="129" cy="40" r="2" />
+        <circle cx="129" cy="48" r="2" />
+      </g>
+    )
+  }
+
+  {
+    kind === 'code' && (
+      <g>
+        <rect x="18" y="18" width="124" height="84" rx="6" />
+        <path d="M18 34h124" />
+        <circle cx="30" cy="26" r="2.5" fill="#23d9f5" stroke="none" />
+        <circle cx="40" cy="26" r="2.5" fill="#23d9f5" stroke="none" />
+        <circle cx="50" cy="26" r="2.5" fill="#23d9f5" stroke="none" />
+        <path d="M64 56 50 68l14 12M96 56l14 12-14 12M86 52l-12 34" stroke-width="4" />
+      </g>
+    )
+  }
+</svg>
+
+<style>
+  .platform-art {
+    filter: drop-shadow(0 0 6px rgb(35 217 245 / 0.35)) drop-shadow(0 0 14px rgb(242 53 165 / 0.18));
+  }
+</style>

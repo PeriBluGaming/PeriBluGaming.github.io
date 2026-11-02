@@ -1,0 +1,33 @@
+---
+import type { FeaturedProject } from '../lib/projects';
+import FeaturedCard from './FeaturedCard.astro';
+import Icon from './Icon.astro';
+import SectionHeading from './SectionHeading.astro';
+
+interface Props {
+  projects: FeaturedProject[];
+}
+
+const { projects } = Astro.props;
+---
+
+{
+  projects.length > 0 && (
+    <section id="projects" class="container-site pt-6 pb-16 sm:pt-8" aria-labelledby="featured-title">
+      <SectionHeading id="featured-title" title="Featured Projects">
+        <a href="#all-projects" class="link-arrow text-[0.95rem]">
+          View All Projects
+          <Icon name="arrow-right" class="size-4" />
+        </a>
+      </SectionHeading>
+
+      <ul class="mt-8 grid gap-6 lg:grid-cols-2">
+        {projects.map((project) => (
+          <li>
+            <FeaturedCard project={project} />
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}

@@ -1,0 +1,262 @@
+---
+import { site } from '../config/site';
+import Icon from './Icon.astro';
+---
+
+<section class="hero" aria-labelledby="hero-title">
+  <!-- Decorative background layers (original synthwave artwork) -->
+  <div class="hero-bg" aria-hidden="true">
+    <div class="hero-art"></div>
+    <div class="hero-shade"></div>
+  </div>
+
+  <div class="container-site hero-content">
+    <p class="eyebrow">
+      <span>Retro Gaming</span>
+      <span class="eyebrow-dot" aria-hidden="true">•</span>
+      <span>Recompilation</span>
+      <span class="eyebrow-dot" aria-hidden="true">•</span>
+      <span>Development</span>
+    </p>
+
+    <h1 id="hero-title" class="hero-title">
+      <span class="t-silver">Retro Games.</span>
+      <span class="block"><span class="t-cyan">Modern</span> <span class="t-magenta">Possibilities.</span></span>
+    </h1>
+
+    <p class="hero-lead">
+      Preserving classic gaming experiences through modern technology, native recompilation and creative
+      development.
+    </p>
+
+    <div class="hero-actions">
+      <a href="#projects" class="btn btn-primary">
+        <Icon name="gamepad" class="size-7 text-neon-cyan" />
+        Explore Projects
+      </a>
+      <a href={site.githubUrl} class="btn btn-ghost" target="_blank" rel="noopener">
+        <Icon name="github" class="size-7" />
+        View on GitHub
+        <span class="sr-only">(opens in a new tab)</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<style>
+  .hero {
+    --hero-img: url('/images/hero-synthwave.webp');
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    align-items: flex-end;
+    min-height: clamp(660px, min(66vw, 100svh), 940px);
+    padding-top: 7rem;
+    padding-bottom: 3.5rem;
+    overflow: hidden;
+  }
+
+  .hero-bg,
+  .hero-bg > div {
+    position: absolute;
+    inset: 0;
+  }
+  .hero-bg {
+    z-index: -1;
+  }
+
+  /*
+   * Sharp artwork: the portrait source is scaled to the hero height so that
+   * sun, mountains and grid sit in the upper part like in the mockup.
+   * Sun centre (y≈640 of 1672) lands at ~24% of the hero height.
+   * The layer has the image's own aspect ratio so the side fade sits on the image edges;
+   * the eased mask lets both sides dissolve into the page background (#0b0d19).
+   */
+  .hero-art {
+    --fade: transparent 0%, rgb(0 0 0 / 0.06) 5%, rgb(0 0 0 / 0.2) 10%, rgb(0 0 0 / 0.42) 15%,
+      rgb(0 0 0 / 0.68) 20%, rgb(0 0 0 / 0.88) 25%, #000 30%;
+    inset: auto !important;
+    top: -41% !important;
+    left: 50% !important;
+    height: 170%;
+    aspect-ratio: 941 / 1672;
+    transform: translateX(-50%);
+    background: var(--hero-img) center / cover no-repeat;
+    -webkit-mask-image: linear-gradient(90deg, var(--fade)), linear-gradient(270deg, var(--fade));
+    -webkit-mask-composite: source-in;
+    mask-image: linear-gradient(90deg, var(--fade)), linear-gradient(270deg, var(--fade));
+    mask-composite: intersect;
+  }
+
+  .hero-shade {
+    background:
+      linear-gradient(180deg, rgb(11 13 25 / 0.55) 0%, rgb(11 13 25 / 0) 18%),
+      radial-gradient(ellipse 58% 40% at 50% 70%, rgb(11 13 25 / 0.78) 0%, rgb(11 13 25 / 0.45) 55%, rgb(11 13 25 / 0) 100%),
+      linear-gradient(180deg, rgb(11 13 25 / 0) 48%, rgb(11 13 25 / 0.55) 70%, rgb(11 13 25 / 0.92) 88%, var(--color-ink) 100%);
+  }
+
+  .hero-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .eyebrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.1rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: #e9ecf5;
+  }
+  .eyebrow::before,
+  .eyebrow::after {
+    content: '';
+    width: 4.5rem;
+    height: 2px;
+    margin-inline: 1.25rem;
+    background: var(--color-neon-cyan);
+    box-shadow: 0 0 8px rgb(35 217 245 / 0.6);
+  }
+  @media (max-width: 1023.98px) {
+    .eyebrow::before,
+    .eyebrow::after {
+      display: none;
+    }
+  }
+  .eyebrow-dot {
+    color: var(--color-neon-cyan);
+    letter-spacing: 0;
+  }
+
+  .hero-title {
+    margin-top: 1.4rem;
+    font-size: clamp(2.5rem, 6.3vw, 5.1rem);
+    font-style: italic;
+    font-weight: 800;
+    line-height: 1.04;
+    letter-spacing: -0.035em;
+    text-wrap: balance;
+  }
+  .hero-title span {
+    padding-right: 0.08em; /* keep italic overhang inside the gradient clip */
+  }
+  .t-silver,
+  .t-cyan,
+  .t-magenta {
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .t-silver {
+    background-image: linear-gradient(180deg, #ffffff 0%, #eef0f6 45%, #b9bfcc 100%);
+  }
+  .t-cyan {
+    background-image: linear-gradient(90deg, #1fe0f7 0%, #23d9f5 60%, #2bb8f2 100%);
+  }
+  .t-magenta {
+    background-image: linear-gradient(90deg, #9365ea 0%, #c04cd0 45%, #f235a5 100%);
+  }
+
+  .hero-lead {
+    margin-top: 1.4rem;
+    max-width: 40rem;
+    font-size: clamp(1rem, 1.6vw, 1.2rem);
+    line-height: 1.55;
+    color: #d2d8e4;
+    text-wrap: balance;
+  }
+
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem 2rem;
+    margin-top: 2.25rem;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.1rem;
+    min-width: 16rem;
+    height: 3.5rem;
+    padding-inline: 1.75rem;
+    border-radius: var(--radius-btn);
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #fff;
+    transition:
+      box-shadow 0.25s,
+      transform 0.25s,
+      border-color 0.25s;
+  }
+  .btn:hover {
+    transform: translateY(-1px);
+  }
+  .btn-primary {
+    border: 2px solid transparent;
+    background:
+      linear-gradient(rgb(11 13 25 / 0.82), rgb(11 13 25 / 0.82)) padding-box,
+      linear-gradient(90deg, var(--color-neon-cyan) 0%, #5fc4f7 45%, var(--color-neon-pink) 100%) border-box;
+    box-shadow:
+      0 0 14px rgb(35 217 245 / 0.28),
+      0 0 20px rgb(242 53 165 / 0.12);
+  }
+  .btn-primary:hover {
+    box-shadow:
+      0 0 20px rgb(35 217 245 / 0.42),
+      0 0 26px rgb(242 53 165 / 0.2);
+  }
+  .btn-ghost {
+    border: 2px solid rgb(255 255 255 / 0.88);
+    background: rgb(11 13 25 / 0.6);
+  }
+  .btn-ghost:hover {
+    border-color: #fff;
+    box-shadow: 0 0 16px rgb(255 255 255 / 0.18);
+  }
+
+  @media (max-width: 767.98px) {
+    .hero {
+      --hero-img: url('/images/hero-synthwave-640.webp');
+      min-height: max(100svh, 720px);
+      padding-top: 6rem;
+      padding-bottom: 3rem;
+    }
+    .hero-art {
+      inset: 0 !important;
+      height: auto;
+      aspect-ratio: auto;
+      transform: none;
+      background-position: center 18%;
+      -webkit-mask-image: none;
+      mask-image: none;
+    }
+    .hero-shade {
+      background:
+        linear-gradient(180deg, rgb(11 13 25 / 0.5) 0%, rgb(11 13 25 / 0) 16%),
+        linear-gradient(180deg, rgb(11 13 25 / 0) 34%, rgb(11 13 25 / 0.72) 52%, rgb(11 13 25 / 0.9) 80%, var(--color-ink) 100%);
+    }
+    .eyebrow {
+      font-size: 0.72rem;
+      letter-spacing: 0.24em;
+      gap: 0.3rem 0.6rem;
+    }
+    .hero-actions {
+      flex-direction: column;
+      width: 100%;
+      max-width: 22rem;
+    }
+    .btn {
+      width: 100%;
+      min-width: 0;
+    }
+  }
+</style>

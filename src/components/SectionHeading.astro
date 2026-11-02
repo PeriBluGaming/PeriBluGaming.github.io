@@ -1,0 +1,22 @@
+---
+interface Props {
+  id: string;
+  title: string;
+  /** Optional count shown after the title, e.g. number of repositories. */
+  count?: number;
+}
+
+const { id, title, count } = Astro.props;
+---
+
+<div class="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+  <h2 id={id} class="flex items-center gap-4 text-[1.35rem] font-bold tracking-[0.06em] uppercase sm:text-[1.65rem]">
+    <svg viewBox="0 0 48 24" class="h-5 w-10 shrink-0 sm:h-6 sm:w-12" fill="none" aria-hidden="true" focusable="false">
+      <path d="M2 10h20M8 16h14" stroke="#f235a5" stroke-width="2.6" stroke-linecap="round"></path>
+      <path d="M38 3 28 21" stroke="#9365ea" stroke-width="2.6" stroke-linecap="round"></path>
+    </svg>
+    <span>{title}</span>
+    {count !== undefined && <span class="text-base font-semibold tracking-normal text-muted">({count})</span>}
+  </h2>
+  <slot />
+</div>

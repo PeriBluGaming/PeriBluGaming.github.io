@@ -1,0 +1,23 @@
+---
+import About from '../components/About.astro';
+import AllProjects from '../components/AllProjects.astro';
+import FeaturedProjects from '../components/FeaturedProjects.astro';
+import Footer from '../components/Footer.astro';
+import Header from '../components/Header.astro';
+import Hero from '../components/Hero.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getProjects } from '../lib/projects';
+
+const { featured, all, categories } = await getProjects();
+---
+
+<BaseLayout>
+  <Header />
+  <main id="main" tabindex="-1">
+    <Hero />
+    <FeaturedProjects projects={featured} />
+    <AllProjects projects={all} categories={categories} />
+    <About />
+  </main>
+  <Footer />
+</BaseLayout>

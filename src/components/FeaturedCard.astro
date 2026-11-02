@@ -1,0 +1,125 @@
+---
+import type { FeaturedProject } from '../lib/projects';
+import { formatCount } from '../lib/format';
+import Icon from './Icon.astro';
+import PlatformArt from './PlatformArt.astro';
+
+interface Props {
+  project: FeaturedProject;
+}
+
+const { project } = Astro.props;
+const titleId = `featured-${project.name.toLowerCase()}`;
+---
+
+<article class:list={['featured-card', `accent-${project.accent}`]} aria-labelledby={titleId}>
+  <div class="featured-media">
+    {
+      project.image ? (
+        <img src={project.image.src} alt={project.image.alt} loading="lazy" decoding="async" class="featured-img" />
+      ) : (
+        <PlatformArt kind={project.category.art} class="w-[92%] max-w-[230px]" />
+      )
+    }
+  </div>
+
+  <div class="featured-body">
+    <h3 id={titleId} class="text-[1.3rem] leading-tight font-bold tracking-[-0.01em]">{project.title}</h3>
+
+    {
+      project.tags.length > 0 && (
+        <ul class="mt-2.5 flex flex-wrap gap-2" aria-label="Tags">
+          {project.tags.map((tag) => (
+            <li class="tag">{tag}</li>
+          ))}
+        </ul>
+      )
+    }
+
+    {project.description && <p class="mt-3 text-[0.95rem] leading-[1.45] text-muted">{project.description}</p>}
+
+    <div class="mt-auto flex flex-wrap items-center justify-between gap-x-4 gap-y-2 pt-4">
+      <a href={project.url} class="link-arrow stretched" target="_blank" rel="noopener">
+        <Icon name="github" class="size-6 text-white" />
+        Repository
+        <Icon name="arrow-right" class="size-4" />
+        <span class="sr-only">: {project.title} on GitHub (opens in a new tab)</span>
+      </a>
+      <p class="flex items-center gap-3 text-xs font-medium text-muted">
+        {project.language && <span>{project.language}</span>}
+        {
+          project.stars > 0 && (
+            <span class="inline-flex items-center gap-1">
+              <Icon name="star" class="size-3.5" />
+              {formatCount(project.stars)}
+              <span class="sr-only">stars</span>
+            </span>
+          )
+        }
+      </p>
+    </div>
+  </div>
+</article>
+
+<style>
+  .featured-card {
+    position: relative;
+    display: grid;
+    grid-template-columns: min(44%, 17rem) 1fr;
+    min-height: 13.5rem;
+    border-radius: var(--radius-card);
+    border: 1.5px solid color-mix(in srgb, var(--accent) 85%, transparent);
+    background:
+      radial-gradient(60% 75% at 22% 50%, color-mix(in srgb, var(--accent) 13%, transparent) 0%, transparent 70%),
+      linear-gradient(180deg, #121628 0%, #0d1020 100%);
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--accent) 12%, transparent),
+      0 0 18px color-mix(in srgb, var(--accent) 22%, transparent),
+      inset 0 0 22px color-mix(in srgb, var(--accent) 7%, transparent);
+    transition:
+      transform 0.25s ease,
+      box-shadow 0.25s ease;
+  }
+  .featured-card:hover,
+  .featured-card:focus-within {
+    transform: translateY(-3px);
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent),
+      0 0 26px color-mix(in srgb, var(--accent) 34%, transparent),
+      inset 0 0 26px color-mix(in srgb, var(--accent) 9%, transparent);
+  }
+
+  .featured-media {
+    display: grid;
+    place-items: center;
+    padding: 1.25rem;
+    overflow: hidden;
+    border-radius: var(--radius-card) 0 0 var(--radius-card);
+  }
+  .featured-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    -webkit-mask-image: linear-gradient(90deg, #000 70%, transparent);
+    mask-image: linear-gradient(90deg, #000 70%, transparent);
+  }
+
+  .featured-body {
+    display: flex;
+    flex-direction: column;
+    padding: 1.6rem 1.6rem 1.4rem 0.25rem;
+  }
+
+  @media (max-width: 480px) {
+    .featured-card {
+      grid-template-columns: 1fr;
+    }
+    .featured-media {
+      height: 9.5rem;
+      border-radius: var(--radius-card) var(--radius-card) 0 0;
+    }
+    .featured-body {
+      padding: 0.25rem 1.35rem 1.35rem;
+    }
+  }
+</style>

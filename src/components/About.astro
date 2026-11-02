@@ -1,0 +1,62 @@
+---
+import Icon, { type IconName } from './Icon.astro';
+import SectionHeading from './SectionHeading.astro';
+
+const focus: { icon: IconName; title: string; text: string }[] = [
+  {
+    icon: 'cpu',
+    title: 'Native Recompilation',
+    text: 'Translating original game code into native executables for modern PCs.',
+  },
+  {
+    icon: 'monitor',
+    title: 'Modern Enhancements',
+    text: 'Widescreen, modern controls and quality-of-life features where the original allows it.',
+  },
+  {
+    icon: 'flask',
+    title: 'Homebrew & Experiments',
+    text: 'Small tools and homebrew apps that grow out of everyday retro gaming.',
+  },
+  {
+    icon: 'code',
+    title: 'Open Development',
+    text: 'Source code, progress and issues live openly on GitHub.',
+  },
+];
+---
+
+<section id="about" class="container-site py-16" aria-labelledby="about-title">
+  <SectionHeading id="about-title" title="About PeriBluGaming" />
+
+  <div class="mt-8 grid items-start gap-10 lg:grid-cols-[1.05fr_1fr] lg:gap-14">
+    <div class="max-w-[38rem] space-y-4 text-base leading-[1.7] text-muted sm:text-[1.05rem]">
+      <p>
+        <strong class="font-semibold text-fg">PeriBluGaming</strong> is where a passion for retro games meets software
+        development. The classics from the PlayStation and Super Nintendo era are worth keeping playable – not only as
+        they were, but in a form that feels at home on today's hardware.
+      </p>
+      <p>
+        Most of the work here revolves around native recompilation: taking the original game code and turning it into
+        a program that runs directly on a modern PC. That opens the door to things the original hardware never
+        allowed, like true widescreen or a modern camera, while the game itself stays true to the original.
+      </p>
+      <p>
+        Alongside that there are homebrew projects and tools that come out of this work. Many of them are experiments,
+        and all of them are developed in the open.
+      </p>
+    </div>
+
+    <ul class="grid gap-4 sm:grid-cols-2">
+      {
+        focus.map((item) => (
+          <li class="rounded-[var(--radius-card)] border border-line bg-ink-2 p-5">
+            <Icon name={item.icon} class="size-6 text-neon-cyan" />
+            <h3 class="mt-3 font-bold">{item.title}</h3>
+            <p class="mt-1.5 text-sm leading-[1.55] text-muted">{item.text}</p>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</section>

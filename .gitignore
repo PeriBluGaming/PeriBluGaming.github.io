@@ -1,2 +1,20 @@
 # Local design references
 /design-references/
+node_modules
+
+# Dependencies & build output
+node_modules/
+dist/
+.astro/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# OS / editor
+.DS_Store
+npm-debug.log*
+
+# Python (asset scripts)
+__pycache__/
