@@ -1,0 +1,106 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/montserrat/wght.css';
+@import '@fontsource-variable/montserrat/wght-italic.css';
+
+@theme {
+  --font-sans: 'Montserrat Variable', ui-sans-serif, system-ui, sans-serif;
+
+  --color-ink: #0b0d19;
+  --color-ink-2: #0e1121;
+  --color-surface: #171b2b;
+  --color-line: #252b40;
+  --color-fg: #ffffff;
+  --color-muted: #a8b2c6;
+  --color-neon-cyan: #23d9f5;
+  --color-neon-pink: #f235a5;
+  --color-neon-violet: #9365ea;
+  --color-tag: #232a45;
+  --color-tag-alt: #3b1733;
+
+  --radius-card: 14px;
+  --radius-btn: 9px;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    scroll-behavior: smooth;
+    scroll-padding-top: 1.5rem;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-ink font-sans text-fg antialiased;
+    overflow-x: clip;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-neon-cyan);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--color-neon-pink) 45%, transparent);
+  }
+}
+
+@layer components {
+  .container-site {
+    @apply mx-auto w-full max-w-[1200px] px-4 sm:px-6 lg:px-10;
+  }
+
+  .sr-only-focusable:not(:focus) {
+    @apply sr-only;
+  }
+
+  /* Accent palette shared by cards, lines and glows */
+  .accent-cyan {
+    --accent: var(--color-neon-cyan);
+  }
+  .accent-pink {
+    --accent: var(--color-neon-pink);
+  }
+  .accent-violet {
+    --accent: var(--color-neon-violet);
+  }
+
+  .tag {
+    @apply inline-flex items-center rounded-[5px] bg-tag px-2 py-[3px] text-[0.75rem] leading-none font-bold tracking-wide text-[#e7eaf3] uppercase;
+  }
+  .tag + .tag {
+    @apply bg-tag-alt text-[#ffd0ea];
+  }
+
+  .link-arrow {
+    @apply inline-flex items-center gap-2 font-semibold text-neon-cyan transition-colors hover:text-white;
+  }
+
+  /* Makes the whole (position: relative) card clickable via its main link */
+  .stretched::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius-card);
+  }
+  .stretched:focus-visible {
+    outline: none;
+  }
+  .stretched:focus-visible::after {
+    outline: 2px solid var(--color-neon-cyan);
+    outline-offset: 3px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

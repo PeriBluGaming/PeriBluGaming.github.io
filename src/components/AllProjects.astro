@@ -1,0 +1,136 @@
+---
+import type { Category } from '../config/projects';
+import type { Project } from '../lib/projects';
+import { site } from '../config/site';
+import Icon from './Icon.astro';
+import ProjectCard from './ProjectCard.astro';
+import SectionHeading from './SectionHeading.astro';
+
+interface Props {
+  projects: Project[];
+  categories: Category[];
+}
+
+const { projects, categories } = Astro.props;
+const countFor = (id: string) => projects.filter((p) => p.category.id === id).length;
+---
+
+<section id="all-projects" class="container-site py-16" aria-labelledby="all-title">
+  <SectionHeading id="all-title" title="All Projects" count={projects.length} />
+
+  {
+    projects.length === 0 ? (
+      <p class="mt-8 text-muted">
+        Projects could not be loaded right now.{' '}
+        <a href={site.githubUrl} class="link-arrow" target="_blank" rel="noopener">
+          Browse them on GitHub
+        </a>
+      </p>
+    ) : (
+      <>
+        {categories.length > 1 && (
+          <div class="filters mt-8" role="group" aria-label="Filter projects by category" data-filters hidden>
+            <button type="button" class="filter" data-filter="all" aria-pressed="true">
+              All <span class="filter-count">{projects.length}</span>
+            </button>
+            {categories.map((c) => (
+              <button type="button" class="filter" data-filter={c.id} aria-pressed="false">
+                {c.label} <span class="filter-count">{countFor(c.id)}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        <p class="sr-only" aria-live="polite" data-filter-status />
+
+        <ul class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3" data-project-list>
+          {projects.map((project) => (
+            <li data-category={project.category.id}>
+              <ProjectCard project={project} />
+            </li>
+          ))}
+        </ul>
+
+        <p class="mt-10 text-center">
+          <a href={site.githubUrl + '?tab=repositories'} class="link-arrow" target="_blank" rel="noopener">
+            <Icon name="github" class="size-5 text-white" />
+            All repositories on GitHub
+            <Icon name="arrow-right" class="size-4" />
+            <span class="sr-only">(opens in a new tab)</span>
+          </a>
+        </p>
+      </>
+    )
+  }
+</section>
+
+<script>
+  // Progressive enhancement: without JS all projects stay visible and the filter bar stays hidden.
+  const bar = document.querySelector<HTMLElement>('[data-filters]');
+  const items = document.querySelectorAll<HTMLElement>('[data-project-list] > li');
+  const status = document.querySelector<HTMLElement>('[data-filter-status]');
+
+  if (bar) {
+    bar.hidden = false;
+    const buttons = bar.querySelectorAll<HTMLButtonElement>('[data-filter]');
+
+    bar.addEventListener('click', (event) => {
+      const button = (event.target as Element).closest<HTMLButtonElement>('[data-filter]');
+      if (!button) return;
+      const filter = button.dataset.filter;
+
+      buttons.forEach((b) => b.setAttribute('aria-pressed', String(b === button)));
+      let visible = 0;
+      items.forEach((item) => {
+        const show = filter === 'all' || item.dataset.category === filter;
+        item.hidden = !show;
+        if (show) visible++;
+      });
+      if (status) status.textContent = `Showing ${visible} project${visible === 1 ? '' : 's'}`;
+    });
+  }
+</script>
+
+<style>
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+  .filters[hidden] {
+    display: none;
+  }
+  .filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.95rem;
+    border-radius: 999px;
+    border: 1px solid var(--color-line);
+    background: var(--color-ink-2);
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-muted);
+    cursor: pointer;
+    transition:
+      color 0.2s,
+      border-color 0.2s,
+      background-color 0.2s;
+  }
+  .filter:hover {
+    color: #fff;
+    border-color: #39415c;
+  }
+  .filter[aria-pressed='true'] {
+    color: #fff;
+    border-color: var(--color-neon-cyan);
+    background: rgb(35 217 245 / 0.1);
+  }
+  .filter-count {
+    font-size: 0.75rem;
+    color: var(--color-muted);
+  }
+  .filter[aria-pressed='true'] .filter-count {
+    color: var(--color-neon-cyan);
+  }
+</style>
