@@ -185,7 +185,8 @@ import SocialLinks from './SocialLinks.astro';
       width: 1.75rem;
       bottom: 0.35rem;
     }
-    .nav-socials {
+    /* The list is rendered by SocialLinks, so it carries that component's scope */
+    .nav-menu :global(.nav-socials) {
       margin-top: 0.5rem;
       padding-top: 0.5rem;
       border-top: 1px solid var(--color-line);
