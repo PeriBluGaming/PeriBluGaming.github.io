@@ -107,7 +107,7 @@ export interface FeaturedEntry {
 
 /** Featured projects in display order – independent of GitHub sorting. */
 export const featuredProjects: FeaturedEntry[] = [
-  { repo: 'ToyStory2Recomp', accent: 'cyan' },
+  { repo: 'ToyStory2Recomp', accent: 'cyan', image: { src: '/images/projects/toystory2/gameplay.png', alt: "Buzz Lightyear exploring Andy's room in ToyStory2Recomp.", position: 'center' } },
   { repo: 'BugsBunnyLostinTimeRecomp', accent: 'pink' },
   { repo: 'SuperMarioWorld2YoshisIslandRecomp', accent: 'violet' },
   { repo: 'romm2switch', accent: 'cyan' },
