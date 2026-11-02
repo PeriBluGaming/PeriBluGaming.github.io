@@ -1,6 +1,7 @@
 ---
 /**
- * 16:9 project screenshot. Only rendered for a configured, build-validated image.
+ * Project screenshot that fills its (positioned, sized) container with object-fit: cover.
+ * Only rendered for a configured, build-validated image.
  * If the file still fails to load in the browser, the frame hides itself (no broken-image icon).
  */
 import type { ProjectImage } from '../config/projects';
@@ -28,8 +29,6 @@ const { image, class: className } = Astro.props;
 
 <style>
   .project-image {
-    position: relative;
-    aspect-ratio: 16 / 9;
     overflow: hidden;
     background: var(--color-ink-2);
   }
@@ -37,18 +36,9 @@ const { image, class: className } = Astro.props;
     display: none;
   }
   .project-image img {
-    position: absolute;
-    inset: 0;
+    display: block;
     width: 100%;
     height: 100%;
     object-fit: cover;
-  }
-  /* Subtle fade into the card at the bottom edge */
-  .project-image::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(180deg, transparent 58%, rgb(18 22 40 / 0.85) 100%);
-    pointer-events: none;
   }
 </style>

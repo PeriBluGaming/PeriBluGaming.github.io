@@ -13,19 +13,11 @@ const { project } = Astro.props;
 const titleId = `featured-${project.name.toLowerCase()}`;
 ---
 
-<article
-  class:list={['featured-card', `accent-${project.accent}`, { 'has-image': project.image }]}
-  aria-labelledby={titleId}
->
-  {
-    project.image ? (
-      <ProjectImage image={project.image} class="featured-shot" />
-    ) : (
-      <div class="featured-media">
-        <PlatformArt kind={project.category.art} class="w-[92%] max-w-[230px]" />
-      </div>
-    )
-  }
+<article class:list={['featured-card', `accent-${project.accent}`]} aria-labelledby={titleId}>
+  <div class:list={['featured-media', { 'has-shot': project.image }]}>
+    {project.image && <ProjectImage image={project.image} class="featured-shot" />}
+    <PlatformArt kind={project.category.art} class="w-[92%] max-w-[230px]" />
+  </div>
 
   <div class="featured-body">
     <h3 id={titleId} class="text-[1.3rem] leading-tight font-bold tracking-[-0.01em]">{project.title}</h3>
@@ -106,15 +98,21 @@ const titleId = `featured-${project.name.toLowerCase()}`;
     padding: 1.6rem 1.6rem 1.4rem 0.25rem;
   }
 
-  /* With a screenshot: 16:9 image on top, project details below */
-  .featured-card.has-image {
-    grid-template-columns: 1fr;
+  /*
+   * Screenshot: replaces the artwork and fills the art area edge to edge without adding height.
+   * The artwork stays underneath as fallback and reappears if the image fails to load.
+   */
+  .has-shot {
+    position: relative;
   }
-  .has-image :global(.featured-shot) {
-    border-radius: calc(var(--radius-card) - 1.5px) calc(var(--radius-card) - 1.5px) 0 0;
+  .has-shot :global(.featured-shot) {
+    position: absolute;
+    inset: 0;
+    -webkit-mask-image: linear-gradient(90deg, #000 68%, transparent);
+    mask-image: linear-gradient(90deg, #000 68%, transparent);
   }
-  .has-image .featured-body {
-    padding: 1.1rem 1.6rem 1.4rem;
+  .has-shot :global(.featured-shot:not([hidden]) + .platform-art) {
+    visibility: hidden;
   }
 
   @media (max-width: 480px) {
@@ -128,8 +126,9 @@ const titleId = `featured-${project.name.toLowerCase()}`;
     .featured-body {
       padding: 0.25rem 1.35rem 1.35rem;
     }
-    .has-image .featured-body {
-      padding: 1rem 1.35rem 1.35rem;
+    .has-shot :global(.featured-shot) {
+      -webkit-mask-image: linear-gradient(180deg, #000 62%, transparent);
+      mask-image: linear-gradient(180deg, #000 62%, transparent);
     }
   }
 </style>

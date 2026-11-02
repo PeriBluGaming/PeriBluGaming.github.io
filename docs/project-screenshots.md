@@ -1,15 +1,30 @@
 # Featured project screenshots
 
-Each of the four featured project cards can show an optional screenshot. Without one, the card keeps its stylised
-platform artwork and looks exactly as before. Screenshots are shown on featured cards only, not in "All Projects".
+Each of the four featured project cards can show an optional screenshot. It replaces the stylised platform artwork
+in the left area of the card. The card layout and height stay the same; the screenshot fills that area and fades into
+the card on its right edge (top-to-bottom fade on phones, where the area sits above the text).
+Without a screenshot the card shows the platform artwork as before. Screenshots appear on featured cards only, not
+in "All Projects".
+
+The visible area is a crop of your image:
+
+| Viewport | Visible area (≈ width × height) | Ratio |
+| --- | --- | --- |
+| ≥ 1440 px (two columns) | 240 × 216 px | ≈ 1.1 : 1 |
+| 1024 px (two columns) | 200 × 220 px | ≈ 0.9 : 1 |
+| 481–1023 px (one column) | up to 272 × 216 px | ≈ 1.3 : 1 |
+| ≤ 480 px (stacked) | full card width × 152 px | ≈ 2 : 1 |
+
+Keep the main subject near the centre of the image (or set `position`, see below) so it stays visible in every
+crop.
 
 ## 1. Prepare the image
 
 | | Recommendation |
 | --- | --- |
 | Format | **WebP** for the published file. PNG is fine as source material, but keep it outside the repository. |
-| Aspect ratio | **16:9**. Other ratios are cropped to 16:9 (see `position` below). |
-| Size | **1280 × 720** px. This covers the largest card (≈ 546 px wide) on high-density displays. |
+| Aspect ratio | **16:9** source. The card shows a crop of it (see the table above). |
+| Size | **1280 × 720** px. Plenty for the visible area on high-density displays. |
 | File size | Aim for **≤ 150 KB**. WebP quality 75–82 is usually enough. |
 | Allowed types | `.webp`, `.avif`, `.png`, `.jpg` / `.jpeg` |
 
@@ -78,14 +93,15 @@ The alt text must not be empty.
 
 ## 5. Adjust the crop: `position`
 
-The image always fills a 16:9 frame (`object-fit: cover`). `position` is a CSS
+The image always fills the art area (`object-fit: cover`), so parts of it are cropped. `position` is a CSS
 [`object-position`](https://developer.mozilla.org/docs/Web/CSS/object-position) value that decides which part
-stays visible when the source isn't exactly 16:9:
+stays visible:
 
 | Value | Keeps visible |
 | --- | --- |
 | `'center'` (default) | the middle |
-| `'top'` / `'bottom'` | the upper / lower part |
+| `'left'` / `'right'` | the left / right part (most relevant in the two-column layout) |
+| `'top'` / `'bottom'` | the upper / lower part (most relevant on phones) |
 | `'50% 30%'` | horizontally centred, slightly above the middle |
 
 Only keywords, percentages and lengths are accepted.
@@ -106,5 +122,5 @@ The build stops with `Invalid screenshot for "<repo>": …` if:
 - the alt text is empty
 - `position` contains anything other than position values
 
-If an image still fails to load in the browser, its frame hides itself and the card shows the text only, never a
-broken-image icon.
+If an image still fails to load in the browser, it hides itself and the card shows its platform artwork again,
+never a broken-image icon.
