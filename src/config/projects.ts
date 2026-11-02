@@ -108,9 +108,10 @@ export interface FeaturedEntry {
 /** Featured projects in display order – independent of GitHub sorting. */
 export const featuredProjects: FeaturedEntry[] = [
   { repo: 'ToyStory2Recomp', accent: 'cyan', image: { src: '/images/projects/toystory2/gameplay.png', alt: "Buzz Lightyear exploring Andy's room in ToyStory2Recomp.", position: 'center' } },
-  { repo: 'BugsBunnyLostinTimeRecomp', accent: 'pink' },
+  { repo: 'BugsBunnyLostinTimeRecomp', accent: 'pink', image: { src: '/images/projects/bugs-bunny-lost-in-time/gameplay.png', alt: "Bugs Bunny exploring the world in Bugs Bunny: Lost in Time.", position: 'center' } },
+  { repo: 'RescueShotRecomp', accent: 'cyan'},
   { repo: 'SuperMarioWorld2YoshisIslandRecomp', accent: 'violet' },
-  { repo: 'romm2switch', accent: 'cyan' },
+  { repo: 'romm2switch', accent: 'cyan', image: { src: '/images/projects/romm2switch/gameplay.jpg', alt: "Browsing RomM library on the Switch in RomM2Switch.", position: 'center' } },
 ];
 
 export const listSettings = {
