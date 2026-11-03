@@ -1,0 +1,14 @@
+---
+import type { Props as PtProps } from 'astro-portabletext/types';
+import type { ImageNode } from '../../../lib/blog/normalize';
+import PostImage from '../PostImage.astro';
+
+type Props = PtProps<ImageNode>;
+
+const { image } = Astro.props.node;
+---
+
+<figure class="pt-figure">
+  <PostImage image={image} sizes="(min-width: 768px) 720px, 100vw" />
+  {image.caption && <figcaption>{image.caption}</figcaption>}
+</figure>

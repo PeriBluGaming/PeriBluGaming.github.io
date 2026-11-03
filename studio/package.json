@@ -1,0 +1,34 @@
+{
+  "name": "periblugaming-studio",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Sanity Studio for the PeriBluGaming website (blog/devlog). Separate from the Astro site on purpose.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "dev": "sanity dev",
+    "build": "sanity build",
+    "deploy": "sanity deploy",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "react": "^19.2.2",
+    "react-dom": "^19.2.2",
+    "sanity": "^6.22.0",
+    "styled-components": "^6.1.19"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  },
+  "overrides": {
+    "@vercel/frameworks": {
+      "js-yaml": "3.15.2",
+      "smol-toml": "1.9.1"
+    },
+    "@module-federation/dts-plugin": {
+      "undici": "7.30.1"
+    }
+  }
+}

@@ -18,3 +18,8 @@ npm-debug.log*
 
 # Python (asset scripts)
 __pycache__/
+
+# Sanity Studio (studio/ has its own package.json)
+/studio/node_modules/
+/studio/dist/
+/studio/.sanity/

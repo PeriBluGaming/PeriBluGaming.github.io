@@ -1,0 +1,120 @@
+---
+import type { GetStaticPaths } from 'astro';
+import PostBody from '../../components/blog/PostBody.astro';
+import PostImage from '../../components/blog/PostImage.astro';
+import PostMeta from '../../components/blog/PostMeta.astro';
+import Icon from '../../components/Icon.astro';
+import { site } from '../../config/site';
+import BlogLayout from '../../layouts/BlogLayout.astro';
+import { getBlog, type Post } from '../../lib/blog';
+
+export const getStaticPaths = (async () => {
+  const { posts } = await getBlog();
+  return posts.map((post) => ({ params: { slug: post.slug }, props: { post } }));
+}) satisfies GetStaticPaths;
+
+const { post } = Astro.props as { post: Post };
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BlogPosting',
+  headline: post.title,
+  description: post.seo.description,
+  datePublished: post.publishedAt,
+  inLanguage: post.language,
+  url: new URL(`/blog/${post.slug}/`, site.url).href,
+  author: { '@type': 'Person', name: site.name, url: site.url },
+  ...(post.cover && { image: new URL(post.cover.src, site.url).href }),
+};
+---
+
+<BlogLayout
+  title={`${post.seo.title} – ${site.name}`}
+  description={post.seo.description}
+  type="article"
+  publishedTime={post.publishedAt}
+  noindex={post.seo.noindex}
+  lang={post.language}
+  image={post.cover && { src: post.cover.src, alt: post.cover.alt, width: post.cover.width, height: post.cover.height }}
+>
+  {/* JSON.stringify output, with "<" escaped so it can never close the script element */}
+  <script slot="head" type="application/ld+json" is:inline set:html={JSON.stringify(jsonLd).replace(/</g, '\\u003c')} />
+
+  <article class:list={['container-site pb-16', `accent-${post.category.accent}`]} aria-labelledby="post-title">
+    <div class="mx-auto max-w-[760px]">
+      <a href="/blog/" class="link-arrow text-sm">
+        <Icon name="arrow-right" class="size-4 rotate-180" />
+        All posts
+      </a>
+
+      <header class="mt-6">
+        <a href={`/blog/category/${post.category.id}/`} class="category">{post.category.label}</a>
+        <h1 id="post-title" class="mt-3 text-3xl leading-tight font-bold sm:text-4xl">{post.title}</h1>
+        <p class="mt-4 text-lg text-muted">{post.excerpt}</p>
+        <PostMeta post={post} class="mt-5 text-sm" />
+      </header>
+
+      {
+        post.cover && (
+          <PostImage image={post.cover} sizes="(min-width: 800px) 760px, 100vw" class="cover mt-8" eager />
+        )
+      }
+
+      <div class="mt-10">
+        <PostBody body={post.body} />
+      </div>
+
+      {
+        (post.relatedRepo || post.relatedRelease) && (
+          <aside class="related mt-12" aria-label="Related links">
+            {post.relatedRepo && (
+              <a href={post.relatedRepo.url} class="link-arrow" target="_blank" rel="noopener noreferrer">
+                <Icon name="github" class="size-5 text-white" />
+                {post.relatedRepo.name}
+                <Icon name="arrow-right" class="size-4" />
+                <span class="sr-only">(opens in a new tab)</span>
+              </a>
+            )}
+            {post.relatedRelease && (
+              <a href={post.relatedRelease.url} class="link-arrow" target="_blank" rel="noopener noreferrer">
+                Release {post.relatedRelease.tag}
+                <Icon name="arrow-right" class="size-4" />
+                <span class="sr-only">(opens in a new tab)</span>
+              </a>
+            )}
+          </aside>
+        )
+      }
+    </div>
+  </article>
+</BlogLayout>
+
+<style>
+  .category {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .category:hover {
+    color: #fff;
+  }
+  .cover {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border-radius: var(--radius-card);
+    border: 1px solid var(--color-line);
+    box-shadow: 0 0 28px color-mix(in srgb, var(--accent) 14%, transparent);
+  }
+  .related {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--color-line);
+  }
+</style>

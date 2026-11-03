@@ -1,0 +1,205 @@
+[
+  {
+    "_id": "sample-devlog-widescreen",
+    "title": "Sample devlog: bringing widescreen to a PS1 recomp",
+    "slug": { "current": "sample-devlog-widescreen" },
+    "excerpt": "Placeholder article for local development (BLOG_SAMPLE=1). Shows headings, lists, code, images and links.",
+    "category": "devlog",
+    "publishedAt": "2026-10-28T18:00:00Z",
+    "language": "en",
+    "source": "manual",
+    "coverImage": {
+      "src": "/images/projects/toystory2/gameplay.png",
+      "alt": "Buzz Lightyear exploring Andy's room in ToyStory2Recomp.",
+      "asset": { "metadata": { "dimensions": { "width": 2880, "height": 1631 } } }
+    },
+    "relatedRepo": "ToyStory2Recomp",
+    "body": [
+      {
+        "_type": "block",
+        "_key": "a1",
+        "style": "normal",
+        "markDefs": [],
+        "children": [
+          {
+            "_type": "span",
+            "_key": "a1s1",
+            "text": "This is sample content. It only exists so the blog can be designed and tested without a Sanity project. ",
+            "marks": ["strong"]
+          },
+          {
+            "_type": "span",
+            "_key": "a1s2",
+            "text": "Real articles are written and published in the Sanity Studio.",
+            "marks": []
+          }
+        ]
+      },
+      {
+        "_type": "block",
+        "_key": "a2",
+        "style": "h2",
+        "markDefs": [],
+        "children": [{ "_type": "span", "_key": "a2s1", "text": "Why widescreen is hard", "marks": [] }]
+      },
+      {
+        "_type": "block",
+        "_key": "a3",
+        "style": "normal",
+        "markDefs": [],
+        "children": [
+          {
+            "_type": "span",
+            "_key": "a3s1",
+            "text": "PlayStation games were designed for a 4:3 picture. Stretching the image is easy, but a real widescreen mode needs a wider field of view, adjusted culling and HUD elements that stay in place. Longer paragraphs like this one show how body text reads at a comfortable line length on desktop and on phones.",
+            "marks": []
+          }
+        ]
+      },
+      {
+        "_type": "block",
+        "_key": "a4",
+        "style": "normal",
+        "listItem": "bullet",
+        "level": 1,
+        "markDefs": [],
+        "children": [{ "_type": "span", "_key": "a4s1", "text": "Projection matrix with a configurable aspect ratio", "marks": [] }]
+      },
+      {
+        "_type": "block",
+        "_key": "a5",
+        "style": "normal",
+        "listItem": "bullet",
+        "level": 1,
+        "markDefs": [],
+        "children": [{ "_type": "span", "_key": "a5s1", "text": "Frustum culling that no longer hides objects at the edges", "marks": [] }]
+      },
+      {
+        "_type": "block",
+        "_key": "a6",
+        "style": "normal",
+        "listItem": "bullet",
+        "level": 1,
+        "markDefs": [],
+        "children": [{ "_type": "span", "_key": "a6s1", "text": "HUD anchored to the screen corners", "marks": [] }]
+      },
+      {
+        "_type": "codeBlock",
+        "_key": "a7",
+        "language": "c",
+        "code": "float aspect = (float)width / (float)height;\nfloat fov_x = 2.0f * atanf(tanf(fov_y * 0.5f) * aspect);"
+      },
+      {
+        "_type": "image",
+        "_key": "a8",
+        "src": "/images/projects/toystory2/gameplay.png",
+        "alt": "Widescreen gameplay in ToyStory2Recomp.",
+        "caption": "Sample image with a caption.",
+        "asset": { "metadata": { "dimensions": { "width": 2880, "height": 1631 } } }
+      },
+      {
+        "_type": "block",
+        "_key": "a9",
+        "style": "h3",
+        "markDefs": [],
+        "children": [{ "_type": "span", "_key": "a9s1", "text": "Links", "marks": [] }]
+      },
+      {
+        "_type": "block",
+        "_key": "a10",
+        "style": "normal",
+        "markDefs": [
+          { "_key": "l1", "_type": "link", "href": "https://github.com/PeriBluGaming/ToyStory2Recomp" },
+          { "_key": "l2", "_type": "internalLink", "slug": "sample-news-blog-launch" },
+          { "_key": "l3", "_type": "link", "href": "/#projects" }
+        ],
+        "children": [
+          { "_type": "span", "_key": "a10s1", "text": "External: ", "marks": [] },
+          { "_type": "span", "_key": "a10s2", "text": "the repository on GitHub", "marks": ["l1"] },
+          { "_type": "span", "_key": "a10s3", "text": ". Internal: ", "marks": [] },
+          { "_type": "span", "_key": "a10s4", "text": "another sample post", "marks": ["l2"] },
+          { "_type": "span", "_key": "a10s5", "text": " and ", "marks": [] },
+          { "_type": "span", "_key": "a10s6", "text": "the project list", "marks": ["l3"] },
+          { "_type": "span", "_key": "a10s7", "text": ".", "marks": [] }
+        ]
+      },
+      {
+        "_type": "block",
+        "_key": "a11",
+        "style": "blockquote",
+        "markDefs": [],
+        "children": [{ "_type": "span", "_key": "a11s1", "text": "A quote block, styled with an accent line.", "marks": ["em"] }]
+      }
+    ],
+    "seo": { "title": "Sample devlog: widescreen in a PS1 recomp", "description": "Sample article for local development." }
+  },
+  {
+    "_id": "sample-news-blog-launch",
+    "title": "Sample news: the blog is coming",
+    "slug": { "current": "sample-news-blog-launch" },
+    "excerpt": "Placeholder news post for local development. Without a cover image the card shows a stylised placeholder.",
+    "category": "news",
+    "publishedAt": "2026-10-20T12:00:00Z",
+    "language": "en",
+    "source": "manual",
+    "body": [
+      {
+        "_type": "block",
+        "_key": "n1",
+        "style": "normal",
+        "markDefs": [],
+        "children": [{ "_type": "span", "_key": "n1s1", "text": "A short sample news post without a cover image.", "marks": [] }]
+      }
+    ]
+  },
+  {
+    "_id": "sample-gaming-retro-haul",
+    "title": "Sample gaming: a retro haul",
+    "slug": { "current": "sample-gaming-retro-haul" },
+    "excerpt": "Placeholder gaming post for local development – personal impressions and new additions to the collection.",
+    "category": "gaming",
+    "publishedAt": "2026-10-12T09:30:00Z",
+    "language": "en",
+    "source": "manual",
+    "coverImage": {
+      "src": "/images/projects/yoshis-island/gameplay.png",
+      "alt": "Playing Super Mario World 2: Yoshi's Island on a modern PC.",
+      "asset": { "metadata": { "dimensions": { "width": 2880, "height": 1511 } } }
+    },
+    "body": [
+      {
+        "_type": "block",
+        "_key": "g1",
+        "style": "normal",
+        "markDefs": [],
+        "children": [{ "_type": "span", "_key": "g1s1", "text": "Sample text about retro gaming.", "marks": [] }]
+      }
+    ]
+  },
+  {
+    "_id": "sample-release-rescueshot",
+    "title": "Sample release: RescueShot Recompiled v0.0.0",
+    "slug": { "current": "sample-release-rescueshot-v0-0-0" },
+    "excerpt": "Placeholder for a release post. Later these can be created from GitHub releases (see docs/release-automation.md).",
+    "category": "releases",
+    "publishedAt": "2026-10-05T16:00:00Z",
+    "language": "en",
+    "source": "github-release",
+    "coverImage": {
+      "src": "/images/projects/rescue-shot/gameplay.png",
+      "alt": "Playing RescueShot on a modern PC.",
+      "asset": { "metadata": { "dimensions": { "width": 2409, "height": 1800 } } }
+    },
+    "relatedRepo": "RescueShotRecomp",
+    "relatedRelease": { "tag": "v0.0.0-sample", "url": "https://github.com/PeriBluGaming/RescueShotRecomp/releases" },
+    "body": [
+      {
+        "_type": "block",
+        "_key": "r1",
+        "style": "normal",
+        "markDefs": [],
+        "children": [{ "_type": "span", "_key": "r1s1", "text": "Sample release notes. Release notes are stored as plain text, never as HTML.", "marks": [] }]
+      }
+    ]
+  }
+]

@@ -1,0 +1,10 @@
+---
+import type { Props as PtProps } from 'astro-portabletext/types';
+import type { CodeNode } from '../../../lib/blog/normalize';
+
+type Props = PtProps<CodeNode>;
+
+const { code, language } = Astro.props.node;
+---
+
+<pre class="pt-code" data-language={language}><code>{code}</code></pre>

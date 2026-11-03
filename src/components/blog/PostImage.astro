@@ -1,0 +1,26 @@
+---
+import type { PostImage } from '../../lib/blog';
+
+interface Props {
+  image: PostImage;
+  /** `sizes` attribute for the srcset (only used for responsive Sanity images). */
+  sizes: string;
+  class?: string;
+  eager?: boolean;
+}
+
+const { image, sizes, class: className, eager = false } = Astro.props;
+---
+
+<img
+  src={image.src}
+  srcset={image.srcset}
+  sizes={image.srcset ? sizes : undefined}
+  alt={image.alt}
+  width={image.width}
+  height={image.height}
+  loading={eager ? 'eager' : 'lazy'}
+  fetchpriority={eager ? 'high' : undefined}
+  decoding="async"
+  class={className}
+/>

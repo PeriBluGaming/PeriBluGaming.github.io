@@ -1,0 +1,29 @@
+---
+import type { GetStaticPaths } from 'astro';
+import BlogIndex from '../../../components/blog/BlogIndex.astro';
+import { site } from '../../../config/site';
+import BlogLayout from '../../../layouts/BlogLayout.astro';
+import { getBlog } from '../../../lib/blog';
+
+/** One page per category that has posts – no empty category pages. */
+export const getStaticPaths = (async () => {
+  const { categories } = await getBlog();
+  return categories.map((category) => ({ params: { category: category.id }, props: { category } }));
+}) satisfies GetStaticPaths;
+
+const { category } = Astro.props;
+const data = await getBlog();
+const posts = data.posts.filter((p) => p.category.id === category.id);
+---
+
+<BlogLayout title={`${category.label} – Blog – ${site.name}`} description={category.description}>
+  <BlogIndex
+    title={category.label}
+    intro={category.description}
+    posts={posts}
+    categories={data.categories}
+    allPosts={data.posts}
+    current={category.id}
+    status={data.status}
+  />
+</BlogLayout>

@@ -1,0 +1,103 @@
+---
+import type { Post } from '../../lib/blog';
+import Icon from '../Icon.astro';
+import PostImage from './PostImage.astro';
+import PostMeta from './PostMeta.astro';
+
+interface Props {
+  post: Post;
+}
+
+const { post } = Astro.props;
+const titleId = `post-${post.slug}`;
+---
+
+<article class:list={['blog-card', `accent-${post.category.accent}`]} aria-labelledby={titleId}>
+  <div class="blog-card-art">
+    {
+      post.cover ? (
+        <PostImage image={post.cover} sizes="(min-width: 1024px) 360px, (min-width: 640px) 50vw, 100vw" class="blog-card-img" />
+      ) : (
+        <div class="blog-card-placeholder" aria-hidden="true">
+          <Icon name="gamepad" class="size-10" />
+        </div>
+      )
+    }
+  </div>
+
+  <div class="flex flex-1 flex-col p-5 pt-4">
+    <p class="text-[0.7rem] font-semibold tracking-[0.14em] text-[var(--accent)] uppercase">{post.category.label}</p>
+    <h3 id={titleId} class="mt-2 text-lg leading-tight font-bold">
+      <a href={`/blog/${post.slug}/`} class="stretched">{post.title}</a>
+    </h3>
+    <p class="mt-3 line-clamp-3 text-sm leading-[1.5] text-muted">{post.excerpt}</p>
+    <PostMeta post={post} class="mt-auto pt-5" />
+  </div>
+</article>
+
+<style>
+  .blog-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    border-radius: var(--radius-card);
+    border: 1px solid var(--color-line);
+    background: linear-gradient(180deg, #131729 0%, #0e1121 100%);
+    transition:
+      transform 0.25s ease,
+      border-color 0.25s ease,
+      box-shadow 0.25s ease;
+  }
+  /* Same subtle accent line as the project cards */
+  .blog-card::before {
+    content: '';
+    position: absolute;
+    z-index: 1;
+    top: -1px;
+    left: 1.25rem;
+    width: 3rem;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--accent);
+    box-shadow: 0 0 10px var(--accent);
+  }
+  .blog-card:hover,
+  .blog-card:focus-within {
+    transform: translateY(-3px);
+    border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+    box-shadow: 0 0 20px color-mix(in srgb, var(--accent) 20%, transparent);
+  }
+
+  .blog-card-art {
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background: var(--color-ink-2);
+    border-bottom: 1px solid var(--color-line);
+  }
+  .blog-card-art :global(.blog-card-img) {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+  }
+  .blog-card-placeholder {
+    display: grid;
+    place-items: center;
+    height: 100%;
+    color: color-mix(in srgb, var(--accent) 80%, white);
+    background:
+      linear-gradient(180deg, transparent 55%, color-mix(in srgb, var(--accent) 14%, transparent)),
+      repeating-linear-gradient(0deg, rgb(255 255 255 / 0.035) 0 1px, transparent 1px 22px),
+      repeating-linear-gradient(90deg, rgb(255 255 255 / 0.035) 0 1px, transparent 1px 22px);
+  }
+
+  .stretched {
+    transition: color 0.2s;
+  }
+  .blog-card:hover .stretched {
+    color: color-mix(in srgb, var(--accent) 35%, white);
+  }
+</style>
