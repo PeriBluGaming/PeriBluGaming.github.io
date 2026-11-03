@@ -115,6 +115,10 @@ The website needs **no CORS origin** – it talks to Sanity only during the buil
 - `studioHost` (`studio/sanity.cli.ts`) is first-come-first-served; the URL is public and not secret.
 - Deploying publishes the **Studio app and schema**, not content. Take it down again with `npx sanity undeploy`.
 - Only deploy from a clean checkout of reviewed code (the deployed bundle runs with your session in the browser).
+- `deployment.autoUpdates: false` – no Sanity code is pulled from Sanity's CDN at runtime; updates go through
+  `package.json`, review, `npm audit` and a new deploy.
+- The deployed Studio's hostname is added to the project's CORS origins (with credentials) automatically. Check
+  afterwards in Manage → API that no other origins were added.
 
 ## 7. Setup checklist (do these yourself)
 

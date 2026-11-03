@@ -17,7 +17,13 @@ if (leaking.length > 0) {
 
 export default defineCliConfig({
   api: { projectId, dataset },
-  // Hostname for `npm run deploy` (free hosting on <studioHost>.sanity.studio). Change before the first deploy if taken.
+  // First deploy → https://periblugaming.sanity.studio (free hosting). Change it before the first deploy if taken.
   // The URL is not a secret and not a security boundary: access is protected by Sanity login + project membership.
+  // Deprecated by the CLI in favour of deployment.appId, which only exists after the first deploy:
+  // then add the appId printed by `sanity deploy` below and remove studioHost.
   studioHost: 'periblugaming',
+  deployment: {
+    // Serve exactly the reviewed, lock-filed Sanity version. Updates happen via package.json + review + redeploy.
+    autoUpdates: false,
+  },
 });

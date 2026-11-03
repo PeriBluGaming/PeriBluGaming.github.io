@@ -35,6 +35,20 @@ BLOG_SAMPLE=1 npm run dev            # blog with sample posts at http://localhos
 BLOG_SAMPLE=1 GITHUB_OFFLINE=1 npm run build && npm run preview
 ```
 
+With `SANITY_PROJECT_ID` in your local `.env`, every build needs network access to `<projectId>.api.sanity.io`
+and **fails** if it is unreachable (by design). Offline or in a restricted network:
+`SANITY_PROJECT_ID= npm run build` (blog disabled) or `BLOG_SAMPLE=1 …`.
+
+## PeriBluGaming project
+
+| | |
+| --- | --- |
+| Project ID | `hyyn359x` (public) |
+| Dataset | `production` (public: published documents readable without a token, drafts not) |
+| Studio URL (planned) | `https://periblugaming.sanity.studio` |
+
+`studio/.env.example` contains these values – `cp studio/.env.example studio/.env` is all the Studio needs.
+
 ## Environment variables (website, build time only)
 
 | Variable | Required | Purpose |
@@ -79,7 +93,9 @@ Studio **by design** – never put a token there.
    Studio bundle (`sanity.cli.ts` refuses token-like names).
 5. **Studio online (browser & phone)** – `npm run deploy` in `studio/` publishes it for free at
    `https://<studioHost>.sanity.studio` (`studioHost` is set in `studio/sanity.cli.ts`; pick another name if it is
-   taken). The page itself is public and shows a login screen; content can only be read (beyond published posts)
+   taken). After the first deploy, copy the printed **appId** into `deployment.appId` in `studio/sanity.cli.ts` and
+   remove `studioHost` (the CLI marks it as deprecated). `deployment.autoUpdates` is `false`: the hosted Studio runs
+   exactly the reviewed, lock-filed version. The page itself is public and shows a login screen; content can only be read (beyond published posts)
    or changed by project members. The Studio works in mobile browsers.
 6. **Members** – only your own account, role **Administrator**. Don't invite anyone (Viewers can read drafts).
    No API tokens are needed. Go through the checklist in [sanity-security.md](sanity-security.md#7-setup-checklist-do-these-yourself).
