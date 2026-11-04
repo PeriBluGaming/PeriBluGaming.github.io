@@ -2,7 +2,8 @@
 
 Official portfolio website of **PeriBluGaming** – retro gaming, native recompilation, homebrew and tools.
 Built with [Astro](https://astro.build), TypeScript and Tailwind CSS. Repository data is fetched from the
-GitHub REST API **at build time only**; the published site is fully static.
+GitHub REST API and blog posts from [Sanity](https://www.sanity.io) **at build time only**; the published site is
+fully static.
 
 ## Requirements
 
@@ -32,12 +33,31 @@ npm install
 - `src/config/site.ts` – site metadata and social links (`enabled: false` = hidden).
 - `src/data/fallback-repos.json` – real API snapshot used when GitHub is unreachable or rate-limited.
 
+## Blog (Sanity CMS)
+
+Posts are written in the Sanity Studio (`studio/`, separate package) and built into `/blog/`. Without
+`SANITY_PROJECT_ID` the blog is simply hidden (no menu item). Setup, modes and content model:
+[docs/sanity-setup.md](docs/sanity-setup.md), security model and checklist:
+[docs/sanity-security.md](docs/sanity-security.md).
+
+```bash
+BLOG_SAMPLE=1 npm run dev   # blog with local sample posts, no Sanity account needed
+```
+
+- `src/config/blog.ts` – categories (shared with the Studio).
+- `src/lib/blog/` – config, loading, validation/sanitising, Sanity client.
+- Automatic publishing and release posts are designed but not active:
+  [docs/publishing-pipeline.md](docs/publishing-pipeline.md), [docs/release-automation.md](docs/release-automation.md).
+
 ### Environment variables (optional, build time only)
 
 | Variable         | Purpose                                                            |
 | ---------------- | ------------------------------------------------------------------ |
 | `GITHUB_TOKEN`   | Raises the API rate limit (60 → 5000 req/h). Never commit a token. |
 | `GITHUB_OFFLINE` | `1` = skip the API and build from the fallback snapshot.           |
+
+Blog variables (`SANITY_PROJECT_ID`, `SANITY_DATASET`, `SANITY_API_VERSION`, `SANITY_READ_TOKEN`,
+`SANITY_ALLOW_FAILURE`, `BLOG_SAMPLE`): see `.env.example` and [docs/sanity-setup.md](docs/sanity-setup.md).
 
 ## Deployment
 

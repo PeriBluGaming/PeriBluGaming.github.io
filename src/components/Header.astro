@@ -1,7 +1,16 @@
 ---
 import { navLinks, site } from '../config/site';
+import { getBlog, isBlogVisible } from '../lib/blog';
 import Icon from './Icon.astro';
 import SocialLinks from './SocialLinks.astro';
+
+// The Blog link only appears once there are real posts, so the live menu stays unchanged until then.
+const blogVisible = isBlogVisible(await getBlog());
+const links = navLinks.filter((link) => link.requires !== 'blog' || blogVisible);
+
+const path = Astro.url.pathname;
+const isCurrent = (href: string) =>
+  href === '/' ? path === '/' : !href.includes('#') && (path === href || path.startsWith(href));
 ---
 
 <header class="absolute inset-x-0 top-0 z-30">
@@ -34,9 +43,9 @@ import SocialLinks from './SocialLinks.astro';
       <div id="nav-menu" class="nav-menu" data-nav-menu>
         <ul class="nav-links">
           {
-            navLinks.map((link, i) => (
+            links.map((link) => (
               <li>
-                <a href={link.href} class="nav-link" aria-current={i === 0 ? 'page' : undefined}>
+                <a href={link.href} class="nav-link" aria-current={isCurrent(link.href) ? 'page' : undefined}>
                   {link.label}
                 </a>
               </li>

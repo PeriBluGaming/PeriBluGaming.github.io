@@ -1,0 +1,38 @@
+---
+/** Page shell for blog routes: the site header and footer around a page without the home hero. */
+import Footer from '../components/Footer.astro';
+import Header from '../components/Header.astro';
+import BaseLayout, { type Props as BaseProps } from './BaseLayout.astro';
+
+type Props = Omit<BaseProps, 'preloadHero'>;
+---
+
+<BaseLayout {...Astro.props} preloadHero={false}>
+  <slot name="head" slot="head" />
+  <Header />
+  <main id="main" tabindex="-1" class="blog-main">
+    <slot />
+  </main>
+  <Footer />
+</BaseLayout>
+
+<style>
+  /* The header is positioned over the page (designed for the hero), so leave room for it. */
+  .blog-main {
+    position: relative;
+    padding-top: 6.5rem;
+    background:
+      radial-gradient(60rem 22rem at 15% -4rem, rgb(147 101 234 / 0.16), transparent 70%),
+      radial-gradient(50rem 20rem at 90% -6rem, rgb(242 53 165 / 0.1), transparent 70%);
+  }
+  @media (min-width: 640px) {
+    .blog-main {
+      padding-top: 8rem;
+    }
+  }
+  @media (min-width: 1024px) {
+    .blog-main {
+      padding-top: 9rem;
+    }
+  }
+</style>

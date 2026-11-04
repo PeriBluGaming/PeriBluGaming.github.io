@@ -31,10 +31,18 @@ export const site = {
   githubUrl: GITHUB_URL,
 } as const;
 
-export const navLinks = [
+export interface NavLink {
+  label: string;
+  href: string;
+  /** 'blog' = only shown when the blog has published posts (see src/lib/blog/load.ts → isBlogVisible). */
+  requires?: 'blog';
+}
+
+export const navLinks: NavLink[] = [
   { label: 'Home', href: '/' },
   { label: 'Projects', href: '/#projects' },
+  { label: 'Blog', href: '/blog/', requires: 'blog' },
   { label: 'About', href: '/#about' },
-] as const;
+];
 
 export const activeSocials = (): SocialLink[] => socials.filter((s) => s.enabled && s.url.trim() !== '');

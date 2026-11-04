@@ -1,0 +1,26 @@
+---
+/** Renders link marks. `href` was sanitised in src/lib/blog/normalize.ts; unsafe targets arrive as null. */
+import type { MarkProps } from 'astro-portabletext/types';
+import type { LinkMarkDef } from '../../../lib/blog/normalize';
+
+type Props = MarkProps<Omit<LinkMarkDef, '_key' | '_type'>>;
+
+const { href, external } = Astro.props.node.markDef;
+---
+
+{
+  href ? (
+    external ? (
+      <a href={href} target="_blank" rel="noopener noreferrer">
+        <slot />
+        <span class="sr-only"> (opens in a new tab)</span>
+      </a>
+    ) : (
+      <a href={href}>
+        <slot />
+      </a>
+    )
+  ) : (
+    <slot />
+  )
+}

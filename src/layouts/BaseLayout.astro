@@ -2,24 +2,52 @@
 import '../styles/global.css';
 import { site } from '../config/site';
 
-interface Props {
+export interface Props {
   title?: string;
   description?: string;
+  /** Social preview image (absolute URL or site-relative path). Defaults to the site OG image. */
+  image?: { src: string; alt: string; width?: number; height?: number };
+  /** 'article' for blog posts. */
+  type?: 'website' | 'article';
+  /** ISO date, only used with type 'article'. */
+  publishedTime?: string;
+  /** Keep the page out of search engines (e.g. empty blog). */
+  noindex?: boolean;
+  lang?: string;
+  /** Preload the home page hero artwork. Off for pages without the hero. */
+  preloadHero?: boolean;
 }
 
-const { title = site.title, description = site.description } = Astro.props;
+const {
+  title = site.title,
+  description = site.description,
+  image,
+  type = 'website',
+  publishedTime,
+  noindex = false,
+  lang = 'en',
+  preloadHero = true,
+} = Astro.props;
 const canonical = new URL(Astro.url.pathname, Astro.site ?? site.url);
-const ogImage = new URL('/images/og-image.jpg', Astro.site ?? site.url);
+const ogImage = image
+  ? { ...image, src: new URL(image.src, Astro.site ?? site.url) }
+  : {
+      src: new URL('/images/og-image.jpg', Astro.site ?? site.url),
+      alt: 'PeriBluGaming logo in front of a synthwave sunset',
+      width: 1200,
+      height: 630,
+    };
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang={lang}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
+    {noindex && <meta name="robots" content="noindex" />}
     <meta name="theme-color" content="#0b0d19" />
     <meta name="color-scheme" content="dark" />
 
@@ -27,32 +55,40 @@ const ogImage = new URL('/images/og-image.jpg', Astro.site ?? site.url);
     <link rel="icon" href="/favicon.png" type="image/png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-    <meta property="og:type" content="website" />
+    <meta property="og:type" content={type} />
     <meta property="og:site_name" content={site.name} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
-    <meta property="og:image" content={ogImage} />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="PeriBluGaming logo in front of a synthwave sunset" />
+    <meta property="og:image" content={ogImage.src} />
+    {ogImage.width && <meta property="og:image:width" content={String(ogImage.width)} />}
+    {ogImage.height && <meta property="og:image:height" content={String(ogImage.height)} />}
+    <meta property="og:image:alt" content={ogImage.alt} />
+    {type === 'article' && publishedTime && <meta property="article:published_time" content={publishedTime} />}
     <meta name="twitter:card" content="summary_large_image" />
+    <slot name="head" />
 
     <link rel="preload" as="image" href="/images/logo-wordmark.webp" type="image/webp" />
-    <link
-      rel="preload"
-      as="image"
-      href="/images/hero-synthwave.webp"
-      type="image/webp"
-      media="(min-width: 641px)"
-    />
-    <link
-      rel="preload"
-      as="image"
-      href="/images/hero-synthwave-640.webp"
-      type="image/webp"
-      media="(max-width: 640px)"
-    />
+    {
+      preloadHero && (
+        <>
+          <link
+            rel="preload"
+            as="image"
+            href="/images/hero-synthwave.webp"
+            type="image/webp"
+            media="(min-width: 641px)"
+          />
+          <link
+            rel="preload"
+            as="image"
+            href="/images/hero-synthwave-640.webp"
+            type="image/webp"
+            media="(max-width: 640px)"
+          />
+        </>
+      )
+    }
   </head>
   <body>
     <a

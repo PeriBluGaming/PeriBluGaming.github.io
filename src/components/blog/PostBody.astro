@@ -1,0 +1,121 @@
+---
+/**
+ * Article body. Portable Text is rendered by Astro components only – no `set:html`, so CMS content can never
+ * inject markup. Unsupported node types were already removed during normalisation.
+ */
+import { PortableText } from 'astro-portabletext';
+import type { BodyNode } from '../../lib/blog';
+import BodyImage from './pt/BodyImage.astro';
+import CodeBlock from './pt/CodeBlock.astro';
+import Link from './pt/Link.astro';
+
+interface Props {
+  body: BodyNode[];
+}
+
+const components = {
+  type: { image: BodyImage, codeBlock: CodeBlock },
+  mark: { link: Link },
+};
+---
+
+<div class="prose-blog">
+  <PortableText value={Astro.props.body} components={components} onMissingComponent={false} />
+</div>
+
+<style>
+  .prose-blog {
+    font-size: 1.0625rem;
+    line-height: 1.75;
+    color: #d9deea;
+    overflow-wrap: break-word;
+  }
+  .prose-blog > :global(* + *) {
+    margin-top: 1.25em;
+  }
+  .prose-blog :global(h2) {
+    margin-top: 2.2em;
+    font-size: 1.5rem;
+    line-height: 1.25;
+    font-weight: 700;
+    color: #fff;
+  }
+  .prose-blog :global(h3) {
+    margin-top: 1.9em;
+    font-size: 1.25rem;
+    line-height: 1.3;
+    font-weight: 700;
+    color: #fff;
+  }
+  .prose-blog :global(h4) {
+    margin-top: 1.6em;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #fff;
+  }
+  .prose-blog :global(a) {
+    color: var(--color-neon-cyan);
+    text-decoration: underline;
+    text-decoration-color: rgb(35 217 245 / 0.4);
+    text-underline-offset: 3px;
+    transition:
+      color 0.2s,
+      text-decoration-color 0.2s;
+  }
+  .prose-blog :global(a:hover) {
+    color: #fff;
+    text-decoration-color: var(--color-neon-pink);
+  }
+  .prose-blog :global(strong) {
+    color: #fff;
+    font-weight: 700;
+  }
+  .prose-blog :global(ul),
+  .prose-blog :global(ol) {
+    padding-left: 1.4em;
+  }
+  .prose-blog :global(ul) {
+    list-style: disc;
+  }
+  .prose-blog :global(ol) {
+    list-style: decimal;
+  }
+  .prose-blog :global(li + li) {
+    margin-top: 0.4em;
+  }
+  .prose-blog :global(li::marker) {
+    color: var(--color-neon-pink);
+  }
+  .prose-blog :global(blockquote) {
+    padding: 0.2em 0 0.2em 1.1em;
+    border-left: 3px solid var(--color-neon-violet);
+    color: var(--color-muted);
+  }
+  .prose-blog :global(:not(pre) > code) {
+    padding: 0.15em 0.4em;
+    border-radius: 5px;
+    background: var(--color-tag);
+    font-size: 0.9em;
+  }
+  .prose-blog :global(.pt-code) {
+    overflow-x: auto;
+    padding: 1rem 1.15rem;
+    border-radius: 10px;
+    border: 1px solid var(--color-line);
+    background: var(--color-ink-2);
+    font-size: 0.875rem;
+    line-height: 1.6;
+  }
+  .prose-blog :global(.pt-figure img) {
+    width: 100%;
+    height: auto;
+    border-radius: 10px;
+    border: 1px solid var(--color-line);
+  }
+  .prose-blog :global(figcaption) {
+    margin-top: 0.6rem;
+    font-size: 0.85rem;
+    color: var(--color-muted);
+    text-align: center;
+  }
+</style>

@@ -1,0 +1,20 @@
+---
+import BlogIndex from '../../components/blog/BlogIndex.astro';
+import { blog } from '../../config/blog';
+import { site } from '../../config/site';
+import BlogLayout from '../../layouts/BlogLayout.astro';
+import { getBlog, isBlogVisible } from '../../lib/blog';
+
+const data = await getBlog();
+---
+
+<BlogLayout title={`${blog.title} – ${site.name}`} description={blog.description} noindex={!isBlogVisible(data)}>
+  <BlogIndex
+    title={blog.title}
+    intro={blog.description}
+    posts={data.posts}
+    categories={data.categories}
+    allPosts={data.posts}
+    status={data.status}
+  />
+</BlogLayout>
