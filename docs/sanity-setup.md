@@ -164,6 +164,16 @@ a repository needs **no** project document. The website reads published project 
 - **Deploys:** published project changes are part of the deploy fingerprint and go live with the 15-minute check,
   like posts; drafts and release versions don't trigger builds ([deployment.md](deployment.md)).
 
+#### Migrating the local configuration (dry run only)
+
+`npm run migrate:projects:dry-run` (add `-- --json` for a machine-readable plan) shows how `src/config/projects.ts`
+plus intended additions (currently SledStormPSXRecomp, featured as 4th entry; the entries after it move down) would
+become project documents: deterministic IDs
+(`project-<repo>`), CREATE / UPDATE / UNCHANGED / SKIP / BLOCKED per project, field-by-field conflicts with existing
+documents (never overwritten), screenshot upload needs (local files are matched to Sanity assets by SHA-1) and the
+effect on the website via the real merge. It is **read-only**: tokenless GET queries only, no Sanity client, no write
+mode – nothing is created, uploaded or published. Writing the documents is a separate, reviewed step.
+
 | Field | Behaviour |
 | --- | --- |
 | `repo` | Required. Name below `github.com/PeriBluGaming/` (letters, digits, `.`, `-`, `_`, no surrounding spaces). Unique across all project documents, compared case-insensitively, drafts included. If the uniqueness check can't run, validation fails with a message (publishing stays blocked). |

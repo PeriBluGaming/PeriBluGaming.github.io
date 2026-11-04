@@ -12,6 +12,7 @@
     "preview": "astro preview",
     "check": "astro check",
     "snapshot": "node scripts/update-fallback.ts",
+    "migrate:projects:dry-run": "node --env-file-if-exists=.env scripts/sanity-project-migration-dry-run.ts",
     "test": "node --test \"tests/**/*.test.ts\"",
     "astro": "astro"
   },
