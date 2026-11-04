@@ -59,6 +59,24 @@ export function readOnlySanityFetch(fetchImpl: typeof fetch = fetch) {
   };
 }
 
+/** Local screenshots of the featured configuration: existence and SHA-1 (Sanity asset lookup is done separately). */
+export function localScreenshots(config: MergeConfig, root: string): LocalScreenshot[] {
+  return config.featuredProjects.flatMap((f) => {
+    if (!f.image) return [];
+    const file = join(root, 'public', f.image.src);
+    const exists = existsSync(file) && statSync(file).isFile();
+    return [{
+      repo: f.repo,
+      path: f.image.src,
+      exists,
+      alt: f.image.alt,
+      position: f.image.position ?? 'center',
+      sha1: exists ? createHash('sha1').update(readFileSync(file)).digest('hex') : null,
+      sanityAssetId: null,
+    }];
+  });
+}
+
 export interface MigrationInputs {
   repos: RepoData[];
   githubSource: string;
@@ -124,21 +142,7 @@ export async function collectInputs(options: {
   }
   if (!Array.isArray(existing)) throw new MigrationAbort('unexpected response for existing project documents – no plan.');
 
-  // Local screenshots of the featured configuration.
-  const screenshots: LocalScreenshot[] = config.featuredProjects.flatMap((f) => {
-    if (!f.image) return [];
-    const file = join(root, 'public', f.image.src);
-    const exists = existsSync(file) && statSync(file).isFile();
-    return [{
-      repo: f.repo,
-      path: f.image.src,
-      exists,
-      alt: f.image.alt,
-      position: f.image.position ?? 'center',
-      sha1: exists ? createHash('sha1').update(readFileSync(file)).digest('hex') : null,
-      sanityAssetId: null,
-    }];
-  });
+  const screenshots = localScreenshots(config, root);
   const hashes = screenshots.map((s) => s.sha1).filter((h): h is string => h !== null);
   if (hashes.length) {
     let assets: unknown;
@@ -151,10 +155,14 @@ export async function collectInputs(options: {
     for (const s of screenshots) s.sanityAssetId = (s.sha1 && bySha.get(s.sha1)) || null;
   }
 
+  // GROQ cannot tell an explicitly stored null from a missing field, so the tokenless dry run treats null as missing.
+  // The authenticated preflight reads the exact stored documents instead (explicit null → conflict, never written).
+  const withoutNulls = (existing as Record<string, unknown>[]).map((d) => Object.fromEntries(Object.entries(d).filter(([, v]) => v !== null)));
+
   return {
     repos: repos!,
     githubSource: githubSource!,
-    existing: existing as ExistingProjectDoc[],
+    existing: withoutNulls as unknown as ExistingProjectDoc[],
     sanitySource: `published documents of ${sanity.projectId}/${sanity.dataset} (read without a token): ${existing.length} project document(s)`,
     screenshots,
   };

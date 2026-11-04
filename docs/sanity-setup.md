@@ -164,7 +164,10 @@ a repository needs **no** project document. The website reads published project 
 - **Deploys:** published project changes are part of the deploy fingerprint and go live with the 15-minute check,
   like posts; drafts and release versions don't trigger builds ([deployment.md](deployment.md)).
 
-#### Migrating the local configuration (dry run only)
+#### Migrating the local configuration
+
+**1. Dry run** (no token, nothing written)
+
 
 `npm run migrate:projects:dry-run` (add `-- --json` for a machine-readable plan) shows how `src/config/projects.ts`
 plus intended additions (currently SledStormPSXRecomp, featured as 4th entry; the entries after it move down) would
@@ -172,7 +175,80 @@ become project documents: deterministic IDs
 (`project-<repo>`), CREATE / UPDATE / UNCHANGED / SKIP / BLOCKED per project, field-by-field conflicts with existing
 documents (never overwritten), screenshot upload needs (local files are matched to Sanity assets by SHA-1) and the
 effect on the website via the real merge. It is **read-only**: tokenless GET queries only, no Sanity client, no write
-mode – nothing is created, uploaded or published. Writing the documents is a separate, reviewed step.
+mode – nothing is created, uploaded or published.
+
+**2. Authenticated preflight** (read-only, needs the read token only)
+
+```bash
+read -rs SANITY_MIGRATION_READ_TOKEN && export SANITY_MIGRATION_READ_TOKEN   # paste; not echoed, not in the shell history
+npm run migrate:projects:preflight
+```
+
+Same planner as the dry run, but with an authenticated **raw** read: drafts (`drafts.*`), release versions
+(`versions.*`), duplicate documents and documents of any type that occupy a proposed ID block the project. Existing
+project documents are additionally read **exactly** (doc endpoint, not GROQ): a field stored as an explicit `null` is
+a conflict (BLOCKED, never touched) because it is not reliably "missing" for `setIfMissing`; GROQ, and therefore the
+tokenless dry run, cannot tell `null` from missing. The proposed documents are validated with the Studio schema;
+GitHub must be live (not the fallback snapshot); unintended changes to the existing cards or their featured order
+block execution. Exit code 1 if anything blocks. The output ends with the **plan fingerprint** – SHA-256 over the
+target dataset, the GitHub repository names, every relevant Sanity document with its revision and the exact proposed
+operations – and the command to execute exactly this plan. The preflight never reads the write token.
+
+**3. Execution** (writes – only after reviewing the preflight)
+
+```bash
+read -rs SANITY_MIGRATION_WRITE_TOKEN && export SANITY_MIGRATION_WRITE_TOKEN   # in addition to the read token
+npm run migrate:projects:execute -- --execute --confirm-dataset=production --plan=<fingerprint from step 2>
+unset SANITY_MIGRATION_READ_TOKEN SANITY_MIGRATION_WRITE_TOKEN                 # then delete both tokens in Sanity
+```
+
+**Do not create or edit project documents in the Studio while the execution runs** (see "Race window" below).
+
+Writes only if **all** gates pass: both tokens (different from each other) + `--execute` + `--confirm-dataset`
+matching the configured dataset + `--plan`, no unknown or repeated arguments; a fresh authenticated preflight without
+blockers; the same fingerprint as approved (otherwise "stale"); an identical fingerprint on a second read immediately
+before writing. All writes go into **one atomic transaction** (`periblugaming-project-migration-<fingerprint>`)
+containing only `create` (fails if the document exists – nothing is ever replaced) and, for existing documents,
+`patch` with `ifRevisionID` + `setIfMissing` (fails on concurrent edits, only adds missing fields). A local check
+rejects anything else before sending: no deletions, no `createOrReplace`, no `set`/`unset`, no screenshots/assets, no
+document outside the approved plan. Afterwards a third read verifies that every migrated document is UNCHANGED.
+Nothing is ever retried automatically. Screenshots are not migrated – the local ones keep working through the fallback.
+
+| Result | Exit | Meaning | Next step |
+| --- | --- | --- | --- |
+| `committed_verified` | 0 | Sanity confirmed the transaction and the verification read shows every document as planned | run the preflight once more: every project UNCHANGED |
+| `nothing-to-do` | 0 | everything already UNCHANGED | – |
+| `refused` | 2 | arguments, tokens or a blocker – nothing sent | fix, then preflight again |
+| `stale` | 1 | Sanity or GitHub changed since the preflight – nothing sent | preflight again, review, approve the new fingerprint |
+| `not_committed` | 1 | Sanity refused the transaction (4xx, e.g. a concurrent edit) – atomic, **nothing written** | preflight again |
+| `committed_unverified` | 3 | Sanity **confirmed** the transaction, but the verification read failed or found a difference/conflict. The output lists the transaction ID, the written document IDs and any conflicting document IDs. **The documents may already be live.** | do **not** re-run execute; run a fresh preflight, review the listed documents in the Studio |
+| `unknown` | 3 | no or unreadable response (network error, **timeout**, 5xx, redirect, malformed 2xx). Atomic, so **all or nothing** of the listed documents was written – which one is not known. **The documents may already be live.** | do **not** re-run execute; run a fresh preflight: written documents show as UNCHANGED (new fingerprint), otherwise the same plan is still current |
+
+Running it again after a successful migration is safe: everything is UNCHANGED and the old fingerprint is rejected.
+
+**Race window (cannot be closed by the script).** Sanity's mutation API cannot make a transaction conditional on the
+*absence* of other documents: `create` only fails if the published ID exists, `ifRevisionID` only guards the published
+document. A draft (`drafts.<id>`) or release version created in the Studio between the last read (gate 4, a few hundred
+milliseconds before the commit) and the commit is therefore not detected *before* writing. Consequences: for a CREATE
+the published document is still created (the draft is not touched), and when the draft is published later it replaces
+the migrated values with the draft's; for an UPDATE the draft does not contain the added fields, so publishing it
+drops them. The verification read after the commit detects such a document (the project becomes BLOCKED), the result is
+`committed_unverified` and names the conflicting document IDs. The script never deletes or changes that draft – review
+it in the Studio and decide manually. Avoid the window altogether: nobody edits project documents while it runs.
+
+**Tokens** – two dedicated API tokens, created just before the migration (Manage → API → Tokens) and **deleted right
+after**:
+
+| Variable | Used for | Minimum permission |
+| --- | --- | --- |
+| `SANITY_MIGRATION_READ_TOKEN` | preflight and every read during execution (drafts and release versions) | **Viewer** |
+| `SANITY_MIGRATION_WRITE_TOKEN` | the single commit request of the execution – nothing else | **Editor** |
+
+The preflight works without the write token and never reads it. The execution refuses (fail closed) unless both are
+set and different – there is no fallback from one to the other, so reads never run with write permission. Both only
+through the environment (never in `.env` files that get shared, never committed, never printed – error messages are
+redacted, requests never follow redirects). The website
+build never reads either token.
 
 | Field | Behaviour |
 | --- | --- |

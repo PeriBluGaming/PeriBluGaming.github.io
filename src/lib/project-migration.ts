@@ -6,6 +6,7 @@
  * GitHub stays authoritative for repository identity; documents are only proposed for repositories in the GitHub
  * inventory. The effect on the website is checked with the real merge (src/lib/project-merge.ts).
  */
+import { createHash } from 'node:crypto';
 import type { Accent, CategoryId, ProjectImage } from '../config/projects.ts';
 import type { RepoData } from './github.ts';
 import {
@@ -61,6 +62,8 @@ export type ProposedFields = Partial<Record<MigratedField, unknown>> & { repo: s
 
 export interface ExistingProjectDoc {
   _id: string;
+  /** Revision (authenticated reads); used as a precondition for updates. */
+  _rev?: string;
   repo?: unknown;
   title?: unknown;
   description?: unknown;
@@ -71,6 +74,17 @@ export interface ExistingProjectDoc {
   featuredOrder?: unknown;
   accent?: unknown;
   screenshots?: { alt?: unknown; assetRef?: unknown }[] | null;
+}
+
+/**
+ * Documents only an authenticated read can see, or that are not published project documents: drafts and release
+ * versions (`drafts.*`, `versions.<release>.*`) of projects, and documents of any type that occupy a proposed ID.
+ */
+export interface RelatedDoc {
+  _id: string;
+  _type: string;
+  _rev?: string;
+  repo?: unknown;
 }
 
 export interface LocalScreenshot {
@@ -112,6 +126,10 @@ export interface ProjectProposal {
   comparison: FieldComparison[];
   origin: 'configuration' | 'addition';
   screenshot: ScreenshotStatus;
+  /** Revision of the existing document (precondition for an UPDATE). */
+  existingRev?: string;
+  /** Drafts, release versions or other documents that block this project (IDs). */
+  conflictingDocuments?: string[];
 }
 
 export interface CardSnapshot {
@@ -153,6 +171,8 @@ export interface MigrationPlan {
   missingRepositories: string[];
   compatibility: CompatibilityReport;
   notes: string[];
+  /** Inputs that determine the plan (for the plan fingerprint): repository names and documents with revisions. */
+  state: { repositories: string[]; documents: string[]; draftsChecked: boolean };
 }
 
 export interface PlanInput {
@@ -160,6 +180,8 @@ export interface PlanInput {
   repos: RepoData[];
   githubSource: string;
   existing: ExistingProjectDoc[];
+  /** Drafts, release versions and ID-occupying documents (authenticated preflight only). Absent = not checked. */
+  related?: RelatedDoc[];
   sanitySource: string;
   screenshots: LocalScreenshot[];
   additions?: readonly ProposedAddition[];
@@ -177,6 +199,13 @@ export function documentIdForRepo(repo: string): string {
 }
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+
+/** `drafts.x` / `versions.<release>.x` → `x`. */
+export function baseDocumentId(id: string): string {
+  if (id.startsWith('drafts.')) return id.slice('drafts.'.length);
+  const version = /^versions\.[^.]+\.(.+)$/.exec(id);
+  return version ? version[1] : id;
+}
 const defined = (v: unknown) => v !== undefined && v !== null;
 
 /** Editorial values from the local configuration (+ intended additions), keyed by normalised repository name. */
@@ -230,10 +259,13 @@ export function proposeFields(config: MergeConfig, additions: readonly ProposedA
 }
 
 function compare(existing: ExistingProjectDoc | undefined, proposed: ProposedFields): FieldComparison[] {
-  return MIGRATED_FIELDS.flatMap((field) => {
+  return MIGRATED_FIELDS.flatMap((field): FieldComparison[] => {
     const e = existing?.[field];
     const p = proposed[field];
     if (!defined(e) && !defined(p)) return [];
+    // An explicitly stored null is a value, not a missing field: whether `setIfMissing` would replace it is not
+    // guaranteed, so it is never touched automatically – manual review instead.
+    if (e === null) return [{ field, existing: null, proposed: p, status: 'conflict' }];
     const status: FieldStatus = !defined(e) ? 'add' : !defined(p) ? 'keep' : same(e, p) ? 'same' : field === 'repo' && repoKey(String(e)) === repoKey(String(p)) ? 'same' : 'conflict';
     return [{ field, existing: e, proposed: p, status }];
   });
@@ -327,11 +359,21 @@ export function planMigration(input: PlanInput): MigrationPlan {
     let operation: Operation;
     let documentId: string | null = existing?._id ?? proposedId;
     const comparison = compare(existing, fields);
+    const targetIds = new Set([proposedId, ...(existing ? [existing._id] : [])]);
+    const related = (input.related ?? []).filter(
+      (d) => targetIds.has(baseDocumentId(d._id)) || (d._type === 'project' && typeof d.repo === 'string' && repoKey(d.repo) === k),
+    );
 
     if (existingDocs.length > 1) {
       operation = 'BLOCKED';
       reasons.push(`Duplicate Sanity documents for this repository: ${existingDocs.map((d) => d._id).sort().join(', ')}. Resolve manually.`);
       documentId = null;
+    } else if (related.length > 0) {
+      operation = 'BLOCKED';
+      reasons.push(
+        `Unpublished or conflicting documents: ${related.map((d) => `${d._id} (${d._type})`).sort().join(', ')}. ` +
+          'Publish or discard drafts / release versions in the Studio, or resolve the ID conflict, then run the preflight again.',
+      );
     } else if ((idOwners.get(proposedId) ?? []).length > 1) {
       operation = 'BLOCKED';
       reasons.push(`Document ID ${proposedId} would be shared by: ${idOwners.get(proposedId)!.join(', ')}.`);
@@ -340,7 +382,7 @@ export function planMigration(input: PlanInput): MigrationPlan {
       reasons.push(`Document ID ${proposedId} is already used by another repository (${String(existingIds.get(proposedId)!.repo)}).`);
     } else if (comparison.some((c) => c.status === 'conflict')) {
       operation = 'BLOCKED';
-      reasons.push(`Editorial conflict with ${existing!._id}: ${comparison.filter((c) => c.status === 'conflict').map((c) => c.field).join(', ')} – manual review required, nothing is overwritten.`);
+      reasons.push(`Editorial conflict with ${existing!._id}: ${comparison.filter((c) => c.status === 'conflict').map((c) => (c.existing === null ? `${c.field} (stored null)` : c.field)).join(', ')} – manual review required, nothing is overwritten.`);
     } else if (!existing) {
       operation = 'CREATE';
     } else if (comparison.some((c) => c.status === 'add')) {
@@ -363,7 +405,11 @@ export function planMigration(input: PlanInput): MigrationPlan {
     }
     reasons.push(...warnings.map((w) => `Website validation: ${w}`), ...schema.map((e) => `Schema validation: ${e}`));
 
-    projects.push({ ...base, repo: repo.name, documentId, operation, reasons, fields: after, comparison });
+    projects.push({
+      ...base, repo: repo.name, documentId, operation, reasons, fields: after, comparison,
+      ...(existing?._rev && { existingRev: existing._rev }),
+      ...(related.length > 0 && { conflictingDocuments: related.map((d) => d._id).sort() }),
+    });
   }
 
   // Featured first in their order, then by repository name – stable across runs.
@@ -416,7 +462,11 @@ export function planMigration(input: PlanInput): MigrationPlan {
   };
 
   if (!input.schemaErrors) notes.push('Studio schema validation could not run (Studio dependencies missing) – only the website validation was applied.');
-  notes.push('Only published Sanity documents are visible to this read-only check; unpublished drafts with the same IDs are not detected.');
+  notes.push(
+    input.related
+      ? 'Drafts, release versions and ID-occupying documents were checked (authenticated read).'
+      : 'Only published Sanity documents are visible to this read-only check; unpublished drafts with the same IDs are not detected.',
+  );
   for (const a of additions) {
     const at = proposals.get(repoKey(a.repo))!.fields.featuredOrder as number;
     notes.push(`${a.repo}: intentional addition (${a.source}), featured at position ${at + 1} (featuredOrder ${at}) as in the stash; the featured projects after it move down by one.`);
@@ -441,7 +491,30 @@ export function planMigration(input: PlanInput): MigrationPlan {
     missingRepositories: missingRepositories.sort(),
     compatibility,
     notes,
+    state: {
+      repositories: input.repos.map((r) => r.name).sort(),
+      documents: [...input.existing, ...(input.related ?? [])].map((d) => `${d._id}@${d._rev ?? '?'}`).sort(),
+      draftsChecked: input.related !== undefined,
+    },
   };
+}
+
+const canonical = (v: unknown): unknown =>
+  Array.isArray(v)
+    ? v.map(canonical)
+    : v && typeof v === 'object'
+      ? Object.fromEntries(Object.keys(v as object).sort().map((k) => [k, canonical((v as Record<string, unknown>)[k])]))
+      : v;
+
+/**
+ * Deterministic fingerprint of a plan: target project/dataset, the GitHub repository names, every relevant Sanity
+ * document with its revision, and the proposed operations with their exact values. Any change to these inputs –
+ * a new edit in Sanity, a new draft, a new repository, a changed configuration – produces a different fingerprint.
+ */
+export function planFingerprint(plan: MigrationPlan, target: { projectId: string; dataset: string }): string {
+  const operations = plan.projects.map((p) => ({ repo: p.repo, documentId: p.documentId, operation: p.operation, fields: p.fields, existingRev: p.existingRev ?? null }));
+  const payload = canonical({ version: 1, target, state: plan.state, operations });
+  return createHash('sha256').update(JSON.stringify(payload)).digest('hex');
 }
 
 /** Sanity documents as the Studio would validate them (no screenshots, no system fields besides _id/_type). */
