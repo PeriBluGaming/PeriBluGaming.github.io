@@ -45,7 +45,8 @@ and **fails** if it is unreachable (by design). Offline or in a restricted netwo
 | --- | --- |
 | Project ID | `hyyn359x` (public) |
 | Dataset | `production` (public: published documents readable without a token, drafts not) |
-| Studio URL (planned) | `https://periblugaming.sanity.studio` |
+| Studio URL | `https://periblugaming.sanity.studio` (deployed) |
+| Studio app ID | `fsi8ker3lj7cei92xxfb5lfn` (public, `deployment.appId` in `studio/sanity.cli.ts`) |
 
 `studio/.env.example` contains these values – `cp studio/.env.example studio/.env` is all the Studio needs.
 
@@ -68,7 +69,8 @@ Studio **by design** – never put a token there.
 
 ## One-time setup on the Free plan
 
-> Nothing here has been set up yet. Each step creates or changes something in an external service – do it
+> For PeriBluGaming the project and the hosted Studio already exist (see the table above); the steps stay here
+> for reference and a possible re-setup. Each step creates or changes something in an external service – do it
 > yourself, or approve it explicitly. No payment details are required at any step. If Sanity offers a trial of a
 > paid plan, do not enter payment details; check **Manage → Plan** that the project is on **Free**.
 
@@ -91,10 +93,11 @@ Studio **by design** – never put a token there.
    **Manage → API → CORS origins**, *with* credentials). Never add the website's domains or wildcards with
    credentials. Never put a token into `studio/.env` – every `SANITY_STUDIO_*` variable ends up in the public
    Studio bundle (`sanity.cli.ts` refuses token-like names).
-5. **Studio online (browser & phone)** – `npm run deploy` in `studio/` publishes it for free at
-   `https://<studioHost>.sanity.studio` (`studioHost` is set in `studio/sanity.cli.ts`; pick another name if it is
-   taken). After the first deploy, copy the printed **appId** into `deployment.appId` in `studio/sanity.cli.ts` and
-   remove `studioHost` (the CLI marks it as deprecated). `deployment.autoUpdates` is `false`: the hosted Studio runs
+5. **Studio online (browser & phone)** – hosted for free at `https://periblugaming.sanity.studio`.
+   `deployment.appId` in `studio/sanity.cli.ts` identifies that deployment, so `npm run deploy` in `studio/`
+   updates it (only after approval). For a new project without an app ID, the first `sanity deploy` asks for a
+   hostname, creates the app and prints its **appId** – put it into `deployment.appId` (it replaces the deprecated
+   `studioHost`). `deployment.autoUpdates` is `false`: the hosted Studio runs
    exactly the reviewed, lock-filed version. The page itself is public and shows a login screen; content can only be read (beyond published posts)
    or changed by project members. The Studio works in mobile browsers.
 6. **Members** – only your own account, role **Administrator**. Don't invite anyone (Viewers can read drafts).

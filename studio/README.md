@@ -7,7 +7,7 @@ the Studio, and the Studio is hosted by Sanity (free) instead of GitHub Pages.
 cp .env.example .env     # SANITY_STUDIO_PROJECT_ID=<project id>
 npm ci
 npm run dev              # http://localhost:3333
-npm run deploy           # https://<studioHost>.sanity.studio (see sanity.cli.ts) – only after approval
+npm run deploy           # updates https://periblugaming.sanity.studio (deployment.appId) – only after approval
 ```
 
 Setup, content model and security notes: [../docs/sanity-setup.md](../docs/sanity-setup.md).

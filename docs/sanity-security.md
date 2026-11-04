@@ -19,7 +19,7 @@ published posts only; nothing unpublished leaks.
 
 ### The Studio URL is not a security boundary
 
-`https://<studioHost>.sanity.studio` serves a static JavaScript app **without authentication**. Anyone can load
+`https://periblugaming.sanity.studio` serves a static JavaScript app **without authentication**. Anyone can load
 it and will see Sanity's login screen. The bundle contains only public information: project ID, dataset name and
 the content schema. Every data read beyond published documents and every write is checked **server-side** by
 Sanity's API against the logged-in user's project membership and role. The same applies to `localhost:3333`.
@@ -105,14 +105,15 @@ The website needs **no CORS origin** – it talks to Sanity only during the buil
 | Origin | Credentials | When |
 | --- | --- | --- |
 | `http://localhost:3333` | allow | added by Sanity for local Studio development. Remove it if you stop developing locally. |
-| `https://<studioHost>.sanity.studio` | allow | added automatically on `sanity deploy` |
+| `https://periblugaming.sanity.studio` | allow | added automatically on `sanity deploy` |
 | `https://periblugaming.github.io`, `https://periblugaming.de` | – | **don't add** (not needed) |
 | any wildcard (`*`, `https://*.example`) with credentials | – | **never** – would let those sites act as you while you're logged in |
 
 ## 6. Studio deployment (`npm run deploy`, later, after approval)
 
-- Free hosting on `<studioHost>.sanity.studio`; requires your logged-in CLI session with Administrator rights.
-- `studioHost` (`studio/sanity.cli.ts`) is first-come-first-served; the URL is public and not secret.
+- Free hosting on `periblugaming.sanity.studio`; requires your logged-in CLI session with Administrator rights.
+- `deployment.appId` (`studio/sanity.cli.ts`) selects the existing deployment; it replaces the deprecated
+  `studioHost`. App ID and URL are public and not secret – the login and project membership protect the data.
 - Deploying publishes the **Studio app and schema**, not content. Take it down again with `npx sanity undeploy`.
 - Only deploy from a clean checkout of reviewed code (the deployed bundle runs with your session in the browser).
 - `deployment.autoUpdates: false` – no Sanity code is pulled from Sanity's CDN at runtime; updates go through
