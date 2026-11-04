@@ -28,16 +28,25 @@ deploy  (pages + id-token write)  gate: main head == built commit AND Sanity fin
 A rebuild happens when **any** of these differ from the live `/build-info.json`:
 
 - the commit on `main` (code was merged) – so merges go live within ~15 minutes without a separate trigger;
-- the **content fingerprint** – SHA-256 over type, ID and revision (`_rev`) of every *visible* Sanity document;
+- the **content fingerprint** – SHA-256 over type, ID and revision (`_rev`) of every *visible* Sanity document
+  (posts and projects, fingerprint version 2);
 - the live file is missing (first publication), unreadable or in an older format.
 
 Typical delay from "Publish" in the Studio to live: **≈ 5–25 minutes** (interval + scheduling delay + 2–3 minutes
 build and deploy). Need it now? Start the workflow manually.
 
-### What counts as "visible" (`src/lib/blog/visibility.ts`)
+### What counts as "visible"
 
-The same GROQ filter is used by the blog query *and* the fingerprint, so they can't drift apart: published
-documents only (no `drafts.*`, no `versions.*`), with a slug, not hidden, `publishedAt <= now()`.
+The same GROQ filters are used by the website queries *and* the fingerprint, so they can't drift apart:
+
+- **Posts** (`src/lib/blog/visibility.ts`): published documents only (no `drafts.*`, no `versions.*`), with a slug,
+  not hidden, `publishedAt <= now()`.
+- **Projects** (`src/lib/project-visibility.ts`): every published project document (no `drafts.*`, no
+  `versions.*`) – hidden ones too, because hiding changes the site.
+
+A new `_rev` means the published document changed, so every field is covered without listing fields – for projects
+title, description, category, tags, hidden, featured, featured order, accent and the screenshots (asset reference,
+alt text, hotspot, crop).
 
 | Action in the Studio | Fingerprint | Deploy |
 | --- | --- | --- |
@@ -48,6 +57,8 @@ documents only (no `drafts.*`, no `versions.*`), with a slug, not hidden, `publi
 | Toggle *Hide on website* + publish | document leaves / enters the set | yes |
 | Post with a future publish date | enters the set once the date has passed | yes, at the first check after that date |
 | Publish without visible changes | new `_rev` | yes (harmless extra build) |
+| Publish / edit / unpublish / delete a project (any field, incl. screenshot) | new `_rev` / document gone | yes |
+| Edit a project draft, or stage it in a release | unchanged | no |
 
 Scheduled posts: the visibility filter uses Sanity's server time, the build skips posts that are still in the
 future by the runner's clock. A post whose publish time falls between the two clocks is left out of the build's
@@ -64,7 +75,7 @@ as annotations (`::error::`) on the run page; failed runs trigger GitHub's notif
 | Sanity unreachable / wrong project (3 attempts) | check **fails** – never "no changes" | `Sanity query failed after 3 attempts: HTTP …` |
 | Live `build-info.json` missing (404) | rebuild | `no build-info.json on the live site yet (first publication)` |
 | Live `build-info.json` unreadable | rebuild, restores it | `live build-info.json unreadable (…)` |
-| Build without content fingerprint | build **fails** (no 15-minute rebuild loop) | `The build has no content fingerprint – …` |
+| Build without content fingerprint (posts **or** projects not loaded from Sanity) | build **fails**, nothing deployed (no 15-minute rebuild loop; an incomplete fingerprint would look like deleted content) | `[build-info] No content fingerprint: …` / `The build has no content fingerprint – …` |
 | Content or `main` changed during the build | deploy skipped, next check builds | notice `Deploy skipped – superseded …` |
 | Build or `deploy-pages` fails | previous deployment stays online | Astro / action error in the log |
 
@@ -117,13 +128,18 @@ over exactly the GitHub fields the site shows – would avoid the daily build bu
    `build-info.json` on the live site and **deploys automatically** within ~15 minutes (blog included). Without the
    variables every check fails (red runs, mails) until they are set.
 
-## Extending to more Sanity types (e.g. projects)
+## Extending to more Sanity types
 
-1. Define the type's visibility filter (like `POST_VISIBLE_FILTER`) and add it to `contentSources` in
-   `src/lib/content-fingerprint.ts`.
-2. Let the type's loader return `_type`, `_id`, `_rev` of the fetched documents and add them to the fingerprint in
-   `src/pages/build-info.json.ts`.
+Posts and projects are included (version 2). For a further type:
+
+1. Define the type's visibility filter in a dependency-free module (like `POST_VISIBLE_FILTER`,
+   `PROJECT_DOCUMENT_FILTER`) and add it to `contentSources` in `src/lib/content-fingerprint.ts`.
+2. Let the type's loader return `_type`, `_id`, `_rev` of the fetched documents – only when the fetch succeeded –
+   and add the source to `buildContentFingerprint` (used by `src/pages/build-info.json.ts`).
 3. Bump `FINGERPRINT_VERSION` → the next check rebuilds once.
+
+Version history: 1 = posts; 2 = posts + projects. A live site built with version 1 is rebuilt once by the first
+check after the update (reason: "older format"); nothing else is needed.
 
 ## Local testing
 

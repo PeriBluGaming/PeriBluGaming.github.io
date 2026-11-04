@@ -61,7 +61,10 @@ function built(): void {
   const commit = requireSha('build-info commit', info.commit ?? undefined);
   if (!info.content) {
     // Without a fingerprint every scheduled check would rebuild again – refuse instead of looping.
-    throw new Error('The build has no content fingerprint – the blog was not built from Sanity (check SANITY_PROJECT_ID).');
+    throw new Error(
+      'The build has no content fingerprint – posts or projects were not loaded from Sanity (see the "[build-info]" ' +
+        'line in the build log; check SANITY_PROJECT_ID and Sanity availability). Not deploying.',
+    );
   }
   output({ commit, content_hash: info.content.hash }, `**Build:** ${commit.slice(0, 7)}, ${info.content.count} visible documents`);
 }

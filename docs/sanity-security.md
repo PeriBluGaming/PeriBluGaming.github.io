@@ -85,6 +85,8 @@ query still never request them.
 | Credential | Needed? | Where it may live | Never |
 | --- | --- | --- | --- |
 | Website read token `SANITY_READ_TOKEN` | **no** (public dataset) | only if dataset is private: GitHub *secret* + local `.env`, role **Viewer** | repository, `studio/.env`, any `PUBLIC_*`/`SANITY_STUDIO_*` variable |
+| Migration read token `SANITY_MIGRATION_READ_TOKEN` | only for the one-time project migration: preflight and every read of the execution ([sanity-setup.md](sanity-setup.md#migrating-the-local-configuration)) | shell environment of the person running it, role **Viewer**; create just before, **delete right after** | repository, `.env` files, GitHub, `studio/.env`, logs |
+| Migration write token `SANITY_MIGRATION_WRITE_TOKEN` | only the single commit request of the migration execution (not needed for the preflight; never used for reads) | shell environment of the person running it, role **Editor**; create just before, **delete right after** | repository, `.env` files, GitHub, `studio/.env`, logs |
 | Write/Editor/Admin token | **no** (Studio uses your login) | later only for release automation: GitHub secret `SANITY_WRITE_TOKEN` | website build, repository, Studio |
 | Deploy token | no (deploy from your logged-in CLI) | – | – |
 | Webhook secrets | no (no webhooks yet) | – | – |
@@ -127,7 +129,7 @@ The website needs **no CORS origin** – it talks to Sanity only during the buil
 - [ ] Create the project → plan is **Free**, no payment method entered.
 - [ ] Dataset `production`, visibility **public** (or private + Viewer token, see §1).
 - [ ] Manage → **Members**: only you, role **Administrator**; no pending invitations; decline unknown access requests.
-- [ ] Manage → **API → Tokens**: **empty** (or only one *Viewer* token if the dataset is private).
+- [ ] Manage → **API → Tokens**: **empty** (or only one *Viewer* token if the dataset is private). Both migration tokens (read and write) are deleted after use.
 - [ ] Manage → **API → CORS origins**: only the entries in §5.
 - [ ] Manage → **API → Webhooks**: none.
 - [ ] `studio/.env` contains only `SANITY_STUDIO_PROJECT_ID` / `SANITY_STUDIO_DATASET`.

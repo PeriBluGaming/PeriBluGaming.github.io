@@ -18,6 +18,10 @@ The visible area is a crop of your image:
 Keep the main subject near the centre of the image (or set `position`, see below) so it stays visible in every
 crop.
 
+Screenshots can also come from Sanity (Studio → *Projects* → *Screenshots*, first image). A valid Sanity screenshot
+takes precedence over the local file configured here; its hotspot replaces `position`. See
+[sanity-setup.md](sanity-setup.md#projects-studioschematypesprojectts).
+
 ## 1. Prepare the image
 
 | | Recommendation |
