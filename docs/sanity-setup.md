@@ -108,17 +108,16 @@ Studio **by design** – never put a token there.
    SANITY_PROJECT_ID=<project id>
    npm run build
    ```
-8. **Production build (later, after approval)** – add `SANITY_PROJECT_ID` (and `SANITY_DATASET` if not
-   `production`) as **repository variables** (Settings → Secrets and variables → Actions → Variables) and pass them
-   in `.github/workflows/deploy.yml`:
+8. **Production build** – add `SANITY_PROJECT_ID` = `hyyn359x` and `SANITY_DATASET` = `production` as
+   **repository variables** (Settings → Secrets and variables → Actions → *Variables*, not secrets).
+   `.github/workflows/deploy.yml` passes them to the build step only:
    ```yaml
    env:
      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
      SANITY_PROJECT_ID: ${{ vars.SANITY_PROJECT_ID }}
      SANITY_DATASET: ${{ vars.SANITY_DATASET }}
    ```
-   `deploy.yml` is intentionally **not** changed yet. Until then production builds the blog in "not configured"
-   mode.
+   Then run the workflow manually. Without the variables the build still succeeds, with the blog hidden.
 
 ### Private dataset (optional)
 
