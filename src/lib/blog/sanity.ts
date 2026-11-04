@@ -9,16 +9,19 @@ import { createClient, type ClientConfig } from '@sanity/client';
 import { createImageUrlBuilder } from '@sanity/image-url';
 import type { BlogConfig } from './config.ts';
 import type { ImageResolver } from './normalize.ts';
+import { POST_VISIBLE_FILTER } from './visibility.ts';
 
 type SanityConfig = Extract<BlogConfig, { mode: 'sanity' }>;
 
 const imageProjection = `{ alt, caption, crop, hotspot, asset->{ _id, url, metadata { dimensions { width, height } } } }`;
 
-/** All published, non-hidden posts whose publish date has passed. Newest first. */
+/** All published, non-hidden posts whose publish date has passed. Newest first. `_rev` feeds the deploy fingerprint. */
 export const POSTS_QUERY = /* groq */ `
-*[_type == "post" && _id in path("*") && defined(slug.current) && hidden != true && publishedAt <= now()]
+*[${POST_VISIBLE_FILTER}]
 | order(publishedAt desc) {
+  _type,
   _id,
+  _rev,
   title,
   slug,
   excerpt,

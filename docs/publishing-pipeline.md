@@ -1,7 +1,8 @@
-# Publishing pipeline: Sanity → GitHub Pages (design, NOT active)
+# Publishing pipeline: Sanity → GitHub Pages (design and options)
 
-Status: **documentation only.** Nothing described here is enabled. `.github/workflows/deploy.yml` stays manual
-(`workflow_dispatch`) until the owner approves one of the options below.
+Status: **Option A is implemented** in `.github/workflows/deploy.yml` – operation, settings and limits:
+[deployment.md](deployment.md). It becomes active once the workflow is on `main` and the repository variables are
+set. Options B and C remain possible later additions for faster publishing.
 
 GitHub Pages serves static files, so a post published in the Studio only goes live after a new build. Goal: publish
 in the Studio → site rebuilds automatically, without manual commits, without tokens in the browser, without secrets
@@ -18,43 +19,25 @@ in the repository and without paid infrastructure.
 - **GitHub side**: a workflow can be started by `repository_dispatch` or `workflow_dispatch` (both need an
   authenticated API call) or by `schedule` (needs no external caller).
 
-## Option A – scheduled check (recommended first step)
+## Option A – scheduled check (implemented)
 
 ```text
-GitHub Actions cron (e.g. every 30 min) → query Sanity: newest _updatedAt of published posts
-   → compare with the value stored at the last deploy → changed? → build + deploy, else stop
+GitHub Actions cron (every 15 min) → fingerprint of the visible Sanity content + commit on main
+   → compare with /build-info.json of the live site → changed? → build + deploy, else stop
 ```
 
 - **No credentials leave GitHub.** Sanity does not need a GitHub token; no public endpoint exists that could be
-  abused to trigger deployments.
-- Reads use the public dataset (or the `SANITY_READ_TOKEN` secret for a private one).
-- The "last deployed" marker can be kept as an Actions cache entry or as a repository variable (the latter needs a
-  token with `variables: write`; a cache entry needs nothing extra).
+  abused to trigger deployments. Reads use the public dataset without a token.
+- Compared with the first sketch (newest `_updatedAt` + count, marker in an Actions cache) the implementation uses
+  - a **fingerprint over type, ID and `_rev` of every visible document**, computed with the same GROQ filter as the
+    blog query – it also catches scheduled posts becoming visible and hide/unhide;
+  - the **live site's `/build-info.json`** as the "last deployed" marker – no cache that can expire, no variable
+    that needs a write token, always compared with what is really online;
+  - the **commit on `main`** as part of the comparison, so merged code goes live without a separate trigger;
+  - a **deploy gate** that refuses outdated builds (re-runs, content changed during the build).
 - Cost: free for public repositories. Scheduled workflows in public repos are disabled automatically after 60 days
   without repository activity – GitHub sends a mail; re-enable with one click.
-- Drawback: delay up to the cron interval; schedules may start a few minutes late.
-
-Sketch (separate file, e.g. `.github/workflows/sanity-sync.yml`):
-
-```yaml
-on:
-  schedule: [{ cron: '*/30 * * * *' }]
-  workflow_dispatch:
-permissions: { contents: read }
-jobs:
-  check:
-    runs-on: ubuntu-latest
-    outputs: { changed: ${{ steps.diff.outputs.changed }} }
-    steps:
-      - id: diff
-        run: |
-          # GROQ: max(_updatedAt) of published posts + count (detects deletions)
-          # compare with cached marker, write "changed=true|false" to $GITHUB_OUTPUT
-  deploy:
-    needs: check
-    if: needs.check.outputs.changed == 'true'
-    uses: ./.github/workflows/deploy.yml   # requires adding `workflow_call` to deploy.yml
-```
+- Drawback: delay up to the cron interval; schedules may start late.
 
 ## Option B – Sanity webhook → GitHub `repository_dispatch`
 
@@ -68,6 +51,10 @@ Studio "Publish" → Sanity webhook (POST https://api.github.com/repos/PeriBluGa
 - A **GitHub token is stored at Sanity** (in the webhook's HTTP headers). It must be a fine-grained PAT for this one
   repository with the minimum permission `repository_dispatch` requires (**Contents: read and write**). That
   permission could also push code, so a leaked token is serious. Expiry + rotation needed.
+- Better variant: call **`workflow_dispatch`** instead (`POST …/actions/workflows/deploy.yml/dispatches`, body
+  `{"ref":"main"}`). It needs only **Actions: write** (cannot change code). The deploy gate and the `main`-only
+  conditions in `deploy.yml` already guard against dispatches on other refs and re-runs of old runs. Keep the
+  schedule as safety net – webhooks are retried only twice and don't fire for scheduled posts.
 - GitHub cannot verify Sanity's webhook signature; anyone holding the token can trigger builds (not change
   content, though – content always comes from Sanity).
 

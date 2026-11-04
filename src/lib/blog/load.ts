@@ -12,6 +12,7 @@
  * Data sources are injected, so the logic is unit-testable without network access.
  */
 import { blogCategories, type BlogCategory } from '../../config/blog.ts';
+import type { ContentItem } from '../content-fingerprint.ts';
 import type { BlogConfig } from './config.ts';
 import { localImageResolver, normalizePost, type ImageResolver, type Post } from './normalize.ts';
 
@@ -24,6 +25,11 @@ export interface BlogData {
   /** Categories that contain at least one post, in configured order. */
   categories: BlogCategory[];
   warnings: string[];
+  /**
+   * Type, ID and revision of every document Sanity returned (before validation) – the input for the deploy
+   * fingerprint, so it describes exactly what this build was made from. Only set for status "sanity".
+   */
+  contentItems?: ContentItem[];
 }
 
 export interface BlogSources {
@@ -127,8 +133,16 @@ export async function loadBlog(config: BlogConfig, sources: BlogSources): Promis
     return withCategories('unavailable', [], [message]);
   }
 
+  // Sanity filters scheduled posts with its server clock, processPosts with ours. A post whose publish time falls
+  // between the two is fetched but not rendered – leave it out of the fingerprint, so the next scheduled check sees
+  // a difference and rebuilds instead of treating it as already live.
+  const contentItems = (raw as unknown[]).flatMap((doc) => {
+    const d = (doc ?? {}) as Record<string, unknown>;
+    if (Date.parse(String(d.publishedAt)) > now.getTime()) return [];
+    return [{ _type: String(d._type ?? 'post'), _id: String(d._id ?? ''), _rev: String(d._rev ?? '') }];
+  });
   const { posts, warnings } = processPosts(raw, sources.sanityImageResolver(config), now);
   warnings.forEach((w) => log.warn(`[blog] ${w}`));
   log.info(`[blog] Loaded ${posts.length} published post(s) from Sanity.`);
-  return withCategories('sanity', posts, warnings);
+  return { ...withCategories('sanity', posts, warnings), contentItems };
 }

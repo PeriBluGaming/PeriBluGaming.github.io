@@ -76,6 +76,35 @@ describe('loadBlog', () => {
     assert.equal(isBlogVisible(data), true);
   });
 
+  it('records type, id and revision of every fetched document for the deploy fingerprint', async () => {
+    const data = await loadBlog(
+      sanity,
+      sources(async () => [
+        { ...doc('a', 'ok', '2026-01-01T00:00:00Z'), _type: 'post', _rev: 'r1' },
+        { _type: 'post', _id: 'broken', _rev: 'r2' }, // skipped for rendering, still part of the fetched state
+      ]),
+    );
+    assert.deepEqual(data.contentItems, [
+      { _type: 'post', _id: 'a', _rev: 'r1' },
+      { _type: 'post', _id: 'broken', _rev: 'r2' },
+    ]);
+    assert.equal(data.posts.length, 1);
+    assert.equal((await loadBlog({ mode: 'disabled' }, sources(async () => []))).contentItems, undefined);
+  });
+
+  it('leaves posts the build treats as scheduled out of the fingerprint (clock skew to Sanity)', async () => {
+    // Sanity's clock already returned it, ours (now = 2026-11-01T00:00Z) is a second behind.
+    const data = await loadBlog(
+      sanity,
+      sources(async () => [
+        { ...doc('live', 'live', '2026-01-01T00:00:00Z'), _type: 'post', _rev: 'r1' },
+        { ...doc('soon', 'soon', '2026-11-01T00:00:01Z'), _type: 'post', _rev: 'r1' },
+      ]),
+    );
+    assert.deepEqual(data.posts.map((p) => p.slug), ['live']);
+    assert.deepEqual(data.contentItems?.map((i) => i._id), ['live']); // next check sees "soon" → rebuild
+  });
+
   it('keeps the blog hidden when Sanity is configured but has no posts yet', async () => {
     const data = await loadBlog(sanity, sources(async () => []));
     assert.equal(data.status, 'sanity');

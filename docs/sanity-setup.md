@@ -110,14 +110,8 @@ Studio **by design** – never put a token there.
    ```
 8. **Production build** – add `SANITY_PROJECT_ID` = `hyyn359x` and `SANITY_DATASET` = `production` as
    **repository variables** (Settings → Secrets and variables → Actions → *Variables*, not secrets).
-   `.github/workflows/deploy.yml` passes them to the build step only:
-   ```yaml
-   env:
-     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-     SANITY_PROJECT_ID: ${{ vars.SANITY_PROJECT_ID }}
-     SANITY_DATASET: ${{ vars.SANITY_DATASET }}
-   ```
-   Then run the workflow manually. Without the variables the build still succeeds, with the blog hidden.
+   `.github/workflows/deploy.yml` passes them to the build and the scheduled content check; without them the
+   workflow fails on purpose. Details: [deployment.md](deployment.md).
 
 ### Private dataset (optional)
 
@@ -129,9 +123,10 @@ Manage → API → Tokens → *Add API token* with **Viewer** permission. Store 
 1. Studio → **Blog posts** → *Create*.
 2. Title → *Generate* slug → short description → category → cover image (16:9, alt text required) → article.
 3. **Publish**. Drafts never reach the website. *Hide on website* keeps a published post offline.
-4. Run the deploy workflow (manual for now; automation: [publishing-pipeline.md](publishing-pipeline.md)).
+4. Done – the scheduled check deploys it within about 5–25 minutes. For an immediate update, run the deploy
+   workflow manually ([deployment.md](deployment.md)).
 
-Posts with a future publish date are skipped until a build runs after that date.
+Posts with a future publish date appear automatically with the first scheduled check after that date.
 
 ## Content model
 
