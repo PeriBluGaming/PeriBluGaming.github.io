@@ -68,6 +68,9 @@ export interface SanityMigrationAdapter {
   commit(transaction: MigrationTransaction, approved: ApprovedTargets): Promise<CommitResult>;
 }
 
+/** Sanity rejects longer transaction IDs with HTTP 400 ("too long (must be at most 64 characters)"). */
+export const MAX_TRANSACTION_ID_LENGTH = 64;
+const TRANSACTION_ID_PATTERN = new RegExp(`^[A-Za-z0-9._-]{1,${MAX_TRANSACTION_ID_LENGTH}}$`);
 const PROJECT_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 const MIGRATED_FIELD_NAMES = new Set(['repo', 'title', 'description', 'category', 'tags', 'hidden', 'featured', 'featuredOrder', 'accent']);
 
@@ -76,7 +79,9 @@ const MIGRATED_FIELD_NAMES = new Set(['repo', 'title', 'description', 'category'
  * Allowed: create (new project document, migrated fields only) and conditional setIfMissing patches.
  */
 export function assertSafeTransaction(tx: MigrationTransaction, approved: ApprovedTargets): void {
-  if (!/^[A-Za-z0-9._-]{1,128}$/.test(tx.transactionId)) throw new Error('unsafe transaction: invalid transaction ID');
+  if (!TRANSACTION_ID_PATTERN.test(tx.transactionId)) {
+    throw new Error(`unsafe transaction: invalid transaction ID (letters, digits, . _ - only; at most ${MAX_TRANSACTION_ID_LENGTH} characters)`);
+  }
   if (tx.mutations.length === 0) throw new Error('unsafe transaction: no mutations');
   const seen = new Set<string>();
   for (const m of tx.mutations) {

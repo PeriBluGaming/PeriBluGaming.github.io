@@ -20,10 +20,12 @@ import {
   authenticatedPreflight,
   buildTransaction,
   executeMigration,
+  migrationTransactionId,
   parseExecuteArgs,
   type PreflightContext,
 } from '../src/lib/project-migration-execute.ts';
 import {
+  MAX_TRANSACTION_ID_LENGTH,
   MigrationCommitError,
   assertSafeTransaction,
   createHttpAdapter,
@@ -263,7 +265,7 @@ describe('execution', () => {
     assert.equal(r.status, 'committed_verified');
     assert.equal(sanity.commits.length, 1);
     const [tx] = sanity.commits;
-    assert.equal(tx.transactionId, `periblugaming-project-migration-${pre.fingerprint.slice(0, 40)}`);
+    assert.equal(tx.transactionId, migrationTransactionId(pre.fingerprint));
     assert.ok(tx.mutations.every((m) => 'create' in m));
     assert.deepEqual(r.documentIds!.sort(), pre.plan.projects.map((p) => p.documentId!).sort());
     // unrelated documents untouched, no screenshots / assets written
@@ -350,7 +352,7 @@ describe('post-commit outcomes (I-1) and the draft race (I-2)', () => {
     sanity.fail = 'read-after-commit';
     const r = await executeMigration(flags(pre.fingerprint), ctx());
     assert.equal(r.status, 'committed_unverified');
-    assert.equal(r.transactionId, `periblugaming-project-migration-${pre.fingerprint.slice(0, 40)}`);
+    assert.equal(r.transactionId, migrationTransactionId(pre.fingerprint));
     assert.deepEqual(r.documentIds, ALL_IDS);
     const text = r.messages.join('\n');
     assert.match(text, /COMMITTED but NOT VERIFIED/);
@@ -459,6 +461,48 @@ describe('argument parsing', () => {
   it('records repeated flags instead of silently taking the last value', () => {
     assert.deepEqual(parseExecuteArgs(['--plan=a', '--plan=b', '--execute', '--execute']).duplicates, ['--plan', '--execute']);
     assert.deepEqual(parseExecuteArgs(['--execute', '--plan=a', '--confirm-dataset=production']).duplicates, []);
+  });
+});
+
+describe('transaction ID (Sanity: at most 64 characters)', () => {
+  const hex = (c: string) => c.repeat(64);
+
+  it('is at most 64 characters for every fingerprint, and the local check enforces the limit', async () => {
+    assert.equal(MAX_TRANSACTION_ID_LENGTH, 64);
+    const pre = await authenticatedPreflight(ctx());
+    for (const fp of [pre.fingerprint, hex('0'), hex('f')]) {
+      const id = migrationTransactionId(fp);
+      assert.ok(id.length <= 64, `${id} has ${id.length} characters`);
+      assert.match(id, /^periblugaming-project-migration-[0-9a-f]{32}$/);
+    }
+    const tx = buildTransaction(pre.plan, pre.fingerprint);
+    assert.ok(tx.transactionId.length <= 64);
+    assertSafeTransaction(tx, { create: new Set(pre.plan.projects.map((p) => p.documentId!)), update: new Set() });
+    // The ID shape Sanity rejected in production (prefix + 40 hex = 72 characters) is refused locally, before sending.
+    const tooLong = { ...tx, transactionId: `periblugaming-project-migration-${pre.fingerprint.slice(0, 40)}` };
+    assert.equal(tooLong.transactionId.length, 72);
+    assert.throws(() => assertSafeTransaction(tooLong, { create: new Set(pre.plan.projects.map((p) => p.documentId!)), update: new Set() }), /at most 64 characters/);
+  });
+
+  it('is deterministic and tied to the approved plan fingerprint', async () => {
+    const a = await authenticatedPreflight(ctx());
+    const b = await authenticatedPreflight(ctx());
+    assert.equal(b.fingerprint, a.fingerprint);
+    assert.equal(buildTransaction(b.plan, b.fingerprint).transactionId, buildTransaction(a.plan, a.fingerprint).transactionId);
+    assert.equal(migrationTransactionId(a.fingerprint), `periblugaming-project-migration-${a.fingerprint.slice(0, 32)}`);
+  });
+
+  it('differs for different plans', async () => {
+    const a = await authenticatedPreflight(ctx());
+    sanity.put({ _id: 'project-toystory2recomp', _type: 'project', repo: 'ToyStory2Recomp', _rev: 'r1' });
+    const b = await authenticatedPreflight(ctx());
+    assert.notEqual(b.fingerprint, a.fingerprint);
+    assert.notEqual(migrationTransactionId(b.fingerprint), migrationTransactionId(a.fingerprint));
+    assert.notEqual(migrationTransactionId(hex('a')), migrationTransactionId(`${'a'.repeat(31)}b${'a'.repeat(32)}`));
+  });
+
+  it('refuses anything that is not a plan fingerprint', () => {
+    for (const bad of ['', 'abc', hex('g'), `${hex('a')}0`, hex('A')]) assert.throws(() => migrationTransactionId(bad), /64-character plan fingerprint/, bad);
   });
 });
 
