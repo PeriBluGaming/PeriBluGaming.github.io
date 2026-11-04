@@ -46,8 +46,8 @@ BLOG_SAMPLE=1 npm run dev   # blog with local sample posts, no Sanity account ne
 
 - `src/config/blog.ts` – categories (shared with the Studio).
 - `src/lib/blog/` – config, loading, validation/sanitising, Sanity client.
-- Automatic publishing and release posts are designed but not active:
-  [docs/publishing-pipeline.md](docs/publishing-pipeline.md), [docs/release-automation.md](docs/release-automation.md).
+- Published posts go live automatically (scheduled check, see *Deployment*). Release posts are designed but not
+  active: [docs/release-automation.md](docs/release-automation.md).
 
 ### Environment variables (optional, build time only)
 
@@ -61,8 +61,11 @@ Blog variables (`SANITY_PROJECT_ID`, `SANITY_DATASET`, `SANITY_API_VERSION`, `SA
 
 ## Deployment
 
-`.github/workflows/deploy.yml` deploys to GitHub Pages and is **manual only** (`workflow_dispatch`).
-Enable Pages with source "GitHub Actions" before the first run.
+`.github/workflows/deploy.yml` deploys `main` to GitHub Pages: manually (`workflow_dispatch`, always builds) and
+every 15 minutes when the code on `main` or the published Sanity content changed – drafts never trigger a deploy.
+A daily build at 03:17 UTC refreshes the GitHub project cards.
+No secrets; requires the repository variables `SANITY_PROJECT_ID` and `SANITY_DATASET`.
+How it works, required settings and limits: [docs/deployment.md](docs/deployment.md).
 
 ## Design references
 

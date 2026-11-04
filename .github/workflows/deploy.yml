@@ -1,26 +1,74 @@
-# Builds the site and deploys it to GitHub Pages.
+# Builds the site and deploys it to GitHub Pages. Details: docs/deployment.md
 #
-# Intentionally MANUAL ONLY (workflow_dispatch): nothing is deployed on push.
-# Before the first run: Settings → Pages → Source: "GitHub Actions".
+# - schedule, every 15 minutes: rebuilds only if the code on main or the visible Sanity content differs from what
+#   the live site was built from (/build-info.json). Drafts never trigger a build.
+# - schedule, daily 03:17 UTC: always rebuilds – refreshes the GitHub project cards (stars, dates, new repositories).
+# - workflow_dispatch (manual): always rebuilds.
+# Production deploys only from main: job conditions here + the branch policy of the "github-pages" environment.
+# Sanity is read without a token (public dataset); no secrets are used besides the built-in GITHUB_TOKEN.
 name: Deploy to GitHub Pages
 
 on:
   workflow_dispatch:
+  # Default branch only. Off the full hour (runs at :00 are delayed most often) and on different minutes, so the
+  # daily run never competes with a content check. Both expressions are mirrored in src/lib/deploy-check.ts (tested).
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+    - cron: '17 3 * * *'
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
+# Nothing by default; each job requests only what it needs.
+permissions: {}
 
+# Whole runs are serialised. At most one run waits; a newer one replaces it, so bursts of changes build once.
 concurrency:
   group: pages
   cancel-in-progress: false
 
+env:
+  # Repository variables (not secrets – both values are public).
+  SANITY_PROJECT_ID: ${{ vars.SANITY_PROJECT_ID }}
+  SANITY_DATASET: ${{ vars.SANITY_DATASET }}
+
 jobs:
-  build:
+  check:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      changed: ${{ steps.check.outputs.changed }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      # Plain Node, no dependencies needed. Fails (instead of reporting "no changes") if Sanity can't be read.
+      # Manual runs and the daily cron always build; the 15-minute cron only on changes.
+      - id: check
+        run: node scripts/deploy-check.ts check
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_SCHEDULE: ${{ github.event.schedule }}
+
+  build:
+    needs: check
+    if: needs.check.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    outputs:
+      commit: ${{ steps.built.outputs.commit }}
+      content_hash: ${{ steps.built.outputs.content_hash }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@v4
         with:
@@ -32,8 +80,12 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          # Built-in, read-only workflow token – only raises the API rate limit.
+          # Built-in, read-only workflow token – only raises the GitHub API rate limit.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Requires a content fingerprint in dist/build-info.json (otherwise every check would rebuild again).
+      - id: built
+        run: node scripts/deploy-check.ts built
 
       - uses: actions/upload-pages-artifact@v3
         with:
@@ -42,9 +94,36 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      # Last gate, inside this job so it also applies when only this job is re-run: deploy only if main has not
+      # moved on and the Sanity content has not changed since the build. Older runs can't overwrite newer deploys.
+      - id: gate
+        run: node scripts/deploy-check.ts verify
+        env:
+          BUILT_COMMIT: ${{ needs.build.outputs.commit }}
+          BUILT_CONTENT_HASH: ${{ needs.build.outputs.content_hash }}
+
       - id: deployment
+        if: steps.gate.outputs.deploy == 'true'
         uses: actions/deploy-pages@v4
+
+      - if: steps.gate.outputs.deploy != 'true'
+        run: echo "::notice::Deploy skipped – ${REASON}. The next scheduled check builds the current state."
+        env:
+          REASON: ${{ steps.gate.outputs.reason }}
