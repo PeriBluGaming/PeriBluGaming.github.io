@@ -143,11 +143,27 @@ with `set:html`.
 
 Categories live in `src/config/blog.ts` and are shared with the Studio – add a category there once.
 
-### Projects (`studio/schemaTypes/project.ts`) – schema only
+### Projects (`studio/schemaTypes/project.ts`)
 
-Optional editorial overrides for GitHub repositories, matched by `repo`. GitHub stays the source of truth for which
-repositories exist and for technical data (language, stars, dates); a repository needs **no** project document.
-**The website does not read these documents yet** – `src/config/projects.ts` is still what the site uses.
+Optional editorial overrides for GitHub repositories, matched by `repo` (case-insensitive, trimmed). GitHub stays the
+source of truth for which repositories exist and for technical data (URL, language, stars, push date, fork/archived);
+a repository needs **no** project document. The website reads published project documents at build time
+(`src/lib/sanity-projects.ts`, same settings as the blog) and merges them in `src/lib/project-merge.ts`:
+
+- **Per field:** explicit Sanity value → `src/config/projects.ts` → GitHub / default. Explicit `false`, `[]` and an
+  empty description count as values; unset fields fall through. Invalid fields are ignored with a build warning.
+- **Featured:** `featured: true` adds, `false` removes, unset keeps the configuration. Order: `featuredOrder`, else
+  the position in `featuredProjects`; ties by that position, then by name. Featured projects bypass the fork/archive
+  filters; hidden projects never appear. `listSettings.exclude` stays absolute.
+- **Screenshot:** the first Sanity screenshot (with alt text) replaces the local one; its hotspot becomes the
+  card's `object-position`. Missing or invalid → local screenshot → platform artwork.
+- **Duplicates** (same repo): the most recently updated document wins, ties by document ID; a warning lists the
+  ignored ones. Documents for repositories GitHub doesn't return are ignored – they never create cards.
+- **Failures:** Sanity not configured, unreachable or returning garbage → the local configuration, as before (warning).
+  An empty collection is fine.
+- **Deploys:** project documents are **not yet part of the deploy fingerprint** ([deployment.md](deployment.md)).
+  Until they are, a published project change goes live with the daily 03:17 UTC build or any other build –
+  extend `contentSources` before relying on faster updates.
 
 | Field | Behaviour |
 | --- | --- |

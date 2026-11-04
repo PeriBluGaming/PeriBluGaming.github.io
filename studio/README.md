@@ -13,7 +13,7 @@ npm run deploy           # updates https://periblugaming.sanity.studio (deployme
 Setup, content model and security notes: [../docs/sanity-setup.md](../docs/sanity-setup.md).
 
 - `schemaTypes/` – registered types (`post`, `blockContent`, `codeBlock`)
-- `schemaTypes/project.ts` – editorial overrides for GitHub projects (Studio → *Projects*); not read by the website yet
+- `schemaTypes/project.ts` – editorial overrides for GitHub projects (Studio → *Projects*), merged into the website at build time
 - `schemaTypes/future/` – prepared type `game`, not registered yet
 - Categories are shared with the website via `../src/config/blog.ts`
 

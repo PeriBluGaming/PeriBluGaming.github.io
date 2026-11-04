@@ -24,7 +24,7 @@ void allAccentsListed;
  * A project document is optional – repositories without one keep their defaults. Every override field is optional;
  * an unset field means "no override" (keep the website's default), which is why `featured` has no initial value:
  * unset and an explicit `false` must stay distinguishable when the website merges overrides later.
- * The website does not read these documents yet.
+ * The website merges published documents at build time (src/lib/project-merge.ts).
  */
 export const project = defineType({
   name: 'project',
