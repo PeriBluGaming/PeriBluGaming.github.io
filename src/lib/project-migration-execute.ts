@@ -37,7 +37,7 @@ import {
 } from './project-migration.ts';
 import { localScreenshots, validateWithStudioSchema } from './project-migration-io.ts';
 import type { MergeConfig } from './project-merge.ts';
-import { MigrationCommitError, type ApprovedTargets, type MigrationTransaction, type SanityMigrationAdapter } from './sanity-migration-adapter.ts';
+import { MAX_TRANSACTION_ID_LENGTH, MigrationCommitError, type ApprovedTargets, type MigrationTransaction, type SanityMigrationAdapter } from './sanity-migration-adapter.ts';
 
 /** Viewer token: every authenticated read (preflight, gates, verification). Never used for writing. */
 export const MIGRATION_READ_TOKEN_ENV = 'SANITY_MIGRATION_READ_TOKEN';
@@ -220,6 +220,17 @@ export function approvedTargets(plan: MigrationPlan): ApprovedTargets {
   };
 }
 
+const TRANSACTION_ID_PREFIX = 'periblugaming-project-migration-';
+
+/**
+ * Deterministic transaction ID for an approved plan: the prefix plus the first 32 hex characters (128 bits) of the
+ * plan fingerprint – exactly 64 characters, Sanity's maximum (see MAX_TRANSACTION_ID_LENGTH).
+ */
+export function migrationTransactionId(fingerprint: string): string {
+  if (!FINGERPRINT.test(fingerprint)) throw new Error('migrationTransactionId: expected a 64-character plan fingerprint.');
+  return `${TRANSACTION_ID_PREFIX}${fingerprint.slice(0, MAX_TRANSACTION_ID_LENGTH - TRANSACTION_ID_PREFIX.length)}`;
+}
+
 /** The plan's CREATE/UPDATE operations as one conditional transaction, named after the plan fingerprint. */
 export function buildTransaction(plan: MigrationPlan, fingerprint: string): MigrationTransaction {
   const mutations: MigrationTransaction['mutations'] = [];
@@ -232,7 +243,7 @@ export function buildTransaction(plan: MigrationPlan, fingerprint: string): Migr
       mutations.push({ patch: { id: p.documentId!, ifRevisionID: p.existingRev, setIfMissing: add } });
     }
   }
-  return { transactionId: `periblugaming-project-migration-${fingerprint.slice(0, 40)}`, mutations };
+  return { transactionId: migrationTransactionId(fingerprint), mutations };
 }
 
 /**

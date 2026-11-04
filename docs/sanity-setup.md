@@ -207,7 +207,7 @@ unset SANITY_MIGRATION_READ_TOKEN SANITY_MIGRATION_WRITE_TOKEN                 #
 Writes only if **all** gates pass: both tokens (different from each other) + `--execute` + `--confirm-dataset`
 matching the configured dataset + `--plan`, no unknown or repeated arguments; a fresh authenticated preflight without
 blockers; the same fingerprint as approved (otherwise "stale"); an identical fingerprint on a second read immediately
-before writing. All writes go into **one atomic transaction** (`periblugaming-project-migration-<fingerprint>`)
+before writing. All writes go into **one atomic transaction** (`periblugaming-project-migration-<first 32 characters of the fingerprint>`, 64 characters – Sanity's maximum)
 containing only `create` (fails if the document exists – nothing is ever replaced) and, for existing documents,
 `patch` with `ifRevisionID` + `setIfMissing` (fails on concurrent edits, only adds missing fields). A local check
 rejects anything else before sending: no deletions, no `createOrReplace`, no `set`/`unset`, no screenshots/assets, no
