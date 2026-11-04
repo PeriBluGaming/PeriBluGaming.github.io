@@ -81,6 +81,7 @@ jobs:
         run: npm run build
         env:
           # Built-in, read-only workflow token – only raises the GitHub API rate limit.
+          # SANITY_PROJECT_ID / SANITY_DATASET come from the workflow-level env (shared with the check and the gate).
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # Requires a content fingerprint in dist/build-info.json (otherwise every check would rebuild again).
