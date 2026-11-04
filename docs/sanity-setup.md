@@ -143,11 +143,28 @@ with `set:html`.
 
 Categories live in `src/config/blog.ts` and are shared with the Studio – add a category there once.
 
+### Projects (`studio/schemaTypes/project.ts`) – schema only
+
+Optional editorial overrides for GitHub repositories, matched by `repo`. GitHub stays the source of truth for which
+repositories exist and for technical data (language, stars, dates); a repository needs **no** project document.
+**The website does not read these documents yet** – `src/config/projects.ts` is still what the site uses.
+
+| Field | Behaviour |
+| --- | --- |
+| `repo` | Required. Name below `github.com/PeriBluGaming/` (letters, digits, `.`, `-`, `_`, no surrounding spaces). Unique across all project documents, compared case-insensitively, drafts included. If the uniqueness check can't run, validation fails with a message (publishing stays blocked). |
+| `title`, `description` | Optional overrides. |
+| `category` | Optional, same categories as `src/config/projects.ts`. |
+| `tags` | Optional, max. 2, non-empty, unique. |
+| `hidden` | Default `false`; only `true` hides a project. |
+| `featured` | Optional, **no default**: unset = keep the website default, `true`/`false` = explicit override. |
+| `featuredOrder` | Optional whole number ≥ 0, lower first; warning if set while not featured. |
+| `accent` | Optional: `cyan`, `pink`, `violet` (same as the website). |
+| `screenshots` | Optional images with hotspot; alt text required. The **first** one is meant for the featured card's left art area (cropped – set the hotspot). |
+
+Security: published project documents (including screenshots) are publicly readable via the API, like posts.
+
 ### Prepared for later (not registered in the Studio)
 
-- `studio/schemaTypes/future/project.ts` – CMS overrides for GitHub projects (title, description, screenshots,
-  featured, visibility, accent, order). The GitHub API stays the source of the repository list;
-  `src/config/projects.ts` remains the fallback.
 - `studio/schemaTypes/future/game.ts` – game collection (title, platform, cover, purchase date, status, notes).
 - Translations: every post has a `language` field (default `en`). For real translations add more entries to
   `blogLanguages`, consider `@sanity/document-internationalization`, and add `/<lang>/blog/` routes.

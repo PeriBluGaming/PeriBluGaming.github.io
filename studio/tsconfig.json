@@ -13,6 +13,6 @@
     "resolveJsonModule": true,
     "types": []
   },
-  "include": ["**/*.ts", "**/*.tsx", "../src/config/blog.ts"],
+  "include": ["**/*.ts", "**/*.tsx", "../src/config/blog.ts", "../src/config/projects.ts"],
   "exclude": ["node_modules", "dist"]
 }

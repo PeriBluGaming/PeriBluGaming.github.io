@@ -13,7 +13,8 @@ npm run deploy           # updates https://periblugaming.sanity.studio (deployme
 Setup, content model and security notes: [../docs/sanity-setup.md](../docs/sanity-setup.md).
 
 - `schemaTypes/` – registered types (`post`, `blockContent`, `codeBlock`)
-- `schemaTypes/future/` – prepared types (`project`, `game`), not registered yet
+- `schemaTypes/project.ts` – editorial overrides for GitHub projects (Studio → *Projects*); not read by the website yet
+- `schemaTypes/future/` – prepared type `game`, not registered yet
 - Categories are shared with the website via `../src/config/blog.ts`
 
 Security: [../docs/sanity-security.md](../docs/sanity-security.md). In short – the Studio uses your Sanity login,
