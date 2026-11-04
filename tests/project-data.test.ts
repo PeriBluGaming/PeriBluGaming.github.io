@@ -45,6 +45,7 @@ describe('buildProjectData', () => {
     const { s, warnings } = sources();
     const data = await buildProjectData(s);
     assert.equal(data.overrides, 'sanity'); // an empty collection is valid, not an error
+    assert.deepEqual(data.contentItems, []);
     assert.deepEqual(names(data.featured), LOCAL_FEATURED);
     assert.deepEqual(data.featured.map((p) => p.image?.src), featuredProjects.map((f) => f.image?.src));
     assert.deepEqual(warnings, []);
@@ -61,7 +62,10 @@ describe('buildProjectData', () => {
       const { s, warnings } = sources(partial as Partial<ProjectSources>);
       const data = await buildProjectData(s);
       assert.equal(data.overrides, status, label);
-      assert.deepEqual({ ...data, overrides: 'x', fetchedAt: 'x' }, { ...baseline, overrides: 'x', fetchedAt: 'x' }, label);
+      // A failed or disabled Sanity fetch never yields fingerprint items – not even an empty list.
+      assert.equal(data.contentItems, undefined, label);
+      const rendered = ({ contentItems, ...rest }: typeof data) => ({ ...rest, overrides: 'x', fetchedAt: 'x' });
+      assert.deepEqual(rendered(data), rendered(baseline), label);
       if (status === 'unavailable') assert.match(warnings.join('\n'), /using the local project configuration/, label);
     }
   });

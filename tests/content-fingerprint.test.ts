@@ -30,9 +30,10 @@ describe('fingerprint query', () => {
     assert.match(q, /\{_type, _id, _rev\}$/);
   });
 
-  it('combines several sources (prepared for projects)', () => {
-    const sources: ContentSource[] = [...contentSources, { type: 'project', filter: '_type == "project"' }];
-    assert.match(fingerprintQuery(sources), /\) \|\| \(_type == "project"\)/);
+  it('combines several sources in one query (posts and projects; extensible)', () => {
+    assert.match(fingerprintQuery(), /\) \|\| \(_type == "project" && _id in path\("\*"\)\)/);
+    const sources: ContentSource[] = [...contentSources, { type: 'game', filter: '_type == "game"' }];
+    assert.match(fingerprintQuery(sources), /\) \|\| \(_type == "game"\)/);
   });
 });
 
@@ -50,13 +51,12 @@ describe('computeFingerprint', () => {
 
   it('reports version, types and count', () => {
     const fp = computeFingerprint([a, b]);
-    assert.deepEqual({ ...fp, hash: fp.hash.length }, { version: 1, types: ['post'], count: 2, hash: 64 });
+    assert.deepEqual({ ...fp, hash: fp.hash.length }, { version: 2, types: ['post', 'project'], count: 2, hash: 64 });
   });
 
   it('separates types with the same id', () => {
-    const sources: ContentSource[] = [...contentSources, { type: 'project', filter: '_type == "project"' }];
-    const asPost = computeFingerprint([a], sources).hash;
-    const asProject = computeFingerprint([{ ...a, _type: 'project' }], sources).hash;
+    const asPost = computeFingerprint([a]).hash;
+    const asProject = computeFingerprint([{ ...a, _type: 'project' }]).hash;
     assert.notEqual(asPost, asProject);
   });
 
@@ -64,7 +64,7 @@ describe('computeFingerprint', () => {
     assert.throws(() => computeFingerprint(null), FingerprintError);
     assert.throws(() => computeFingerprint([{ _type: 'post', _id: 'a' }]), FingerprintError);
     assert.throws(() => computeFingerprint([{ ...a, _rev: '' }]), FingerprintError);
-    assert.throws(() => computeFingerprint([{ ...a, _type: 'project' }]), FingerprintError); // not a configured source
+    assert.throws(() => computeFingerprint([{ ...a, _type: 'game' }]), FingerprintError); // not a configured source
     assert.throws(() => computeFingerprint([a, post('a', 'r2')]), FingerprintError); // duplicate id
   });
 });

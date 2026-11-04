@@ -8,6 +8,7 @@
  */
 import type { Category, ProjectImage } from '../config/projects.ts';
 import type { BlogConfig } from './blog/config.ts';
+import type { ContentItem } from './content-fingerprint.ts';
 import { GitHubApiError, type RepoData } from './github.ts';
 import {
   mergeProjects,
@@ -30,6 +31,11 @@ export interface ProjectData {
   fetchedAt: string;
   /** Whether Sanity overrides were applied ("sanity"), not configured or unavailable (local configuration only). */
   overrides: SanityProjectsStatus;
+  /**
+   * Type, ID and revision of every project document Sanity returned (before validation) – input for the deploy
+   * fingerprint. Only set when overrides is "sanity"; a failed fetch never yields an (empty) list.
+   */
+  contentItems?: ContentItem[];
 }
 
 type SanityConfig = Extract<BlogConfig, { mode: 'sanity' }>;
@@ -69,7 +75,9 @@ async function loadRepos(s: ProjectSources): Promise<{ repos: RepoData[]; source
   }
 }
 
-async function loadOverrides(s: ProjectSources): Promise<{ status: SanityProjectsStatus; overrides: Map<string, EditorialOverride> }> {
+async function loadOverrides(
+  s: ProjectSources,
+): Promise<{ status: SanityProjectsStatus; overrides: Map<string, EditorialOverride>; contentItems?: ContentItem[] }> {
   const log = s.log ?? console;
   const none = (status: SanityProjectsStatus) => ({ status, overrides: new Map<string, EditorialOverride>() });
   const config = s.sanityConfig;
@@ -97,13 +105,17 @@ async function loadOverrides(s: ProjectSources): Promise<{ status: SanityProject
   }
   const { byKey, warnings } = selectOverrides(valid);
   warnings.forEach((w) => log.warn(`[projects] ${w}`));
-  return { status: 'sanity', overrides: byKey };
+  const contentItems = raw.map((doc) => {
+    const d = (doc ?? {}) as Record<string, unknown>;
+    return { _type: 'project', _id: String(d._id ?? ''), _rev: String(d._rev ?? '') };
+  });
+  return { status: 'sanity', overrides: byKey, contentItems };
 }
 
 export async function buildProjectData(s: ProjectSources): Promise<ProjectData> {
   const log = s.log ?? console;
-  const [{ repos, source, fetchedAt }, { status, overrides }] = await Promise.all([loadRepos(s), loadOverrides(s)]);
+  const [{ repos, source, fetchedAt }, { status, overrides, contentItems }] = await Promise.all([loadRepos(s), loadOverrides(s)]);
   const { featured, all, categories, warnings } = mergeProjects({ repos, overrides, config: s.config, resolveLocalImage: s.resolveLocalImage });
   warnings.forEach((w) => log.warn(`[projects] ${w}`));
-  return { featured, all, categories, source, fetchedAt, overrides: status };
+  return { featured, all, categories, source, fetchedAt, overrides: status, ...(contentItems && { contentItems }) };
 }

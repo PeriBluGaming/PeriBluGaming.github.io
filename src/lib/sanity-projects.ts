@@ -8,15 +8,16 @@ import type { ProjectImage } from '../config/projects.ts';
 import type { BlogConfig } from './blog/config.ts';
 import type { RawImage } from './blog/normalize.ts';
 import { sanityClientConfig, sanityImageResolver } from './blog/sanity.ts';
+import { PROJECT_DOCUMENT_FILTER } from './project-visibility.ts';
 
 type SanityConfig = Extract<BlogConfig, { mode: 'sanity' }>;
 
 /**
  * All published project documents (root IDs only: no drafts.*, no versions.*), in a stable order, with an explicit
- * projection. Only the first screenshot is needed for the featured card.
+ * projection. Only the first screenshot is needed for the featured card. `_rev` feeds the deploy fingerprint.
  */
 export const PROJECTS_QUERY = /* groq */ `
-*[_type == "project" && _id in path("*")] | order(_id asc) {
+*[${PROJECT_DOCUMENT_FILTER}] | order(_id asc) {
   _id,
   _rev,
   _updatedAt,

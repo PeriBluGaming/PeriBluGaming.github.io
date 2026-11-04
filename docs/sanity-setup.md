@@ -161,9 +161,8 @@ a repository needs **no** project document. The website reads published project 
   ignored ones. Documents for repositories GitHub doesn't return are ignored – they never create cards.
 - **Failures:** Sanity not configured, unreachable or returning garbage → the local configuration, as before (warning).
   An empty collection is fine.
-- **Deploys:** project documents are **not yet part of the deploy fingerprint** ([deployment.md](deployment.md)).
-  Until they are, a published project change goes live with the daily 03:17 UTC build or any other build –
-  extend `contentSources` before relying on faster updates.
+- **Deploys:** published project changes are part of the deploy fingerprint and go live with the 15-minute check,
+  like posts; drafts and release versions don't trigger builds ([deployment.md](deployment.md)).
 
 | Field | Behaviour |
 | --- | --- |
