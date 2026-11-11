@@ -3,14 +3,16 @@
  *
  * A rendered (not hidden, not excluded) repository gets a page when ANY of these is true:
  * 1. it is featured right now (automatic, also for newly featured projects),
- * 2. its Sanity document has `detailPageEnabled: true` (recorded by the Studio's Publish action the first time the
- *    project was published as featured – stays when it stops being featured),
- * 3. it is listed in the local `detailPages` configuration (permanent record for projects featured in code).
- * Projects that were never activated get no page.
+ * 2. the live site already publishes a page for it (live page manifest, /projects/pages.json) – this keeps pages
+ *    online whatever happened to the featured flag, inside or outside the Studio,
+ * 3. its Sanity document has `detailPageEnabled: true` (recorded by the Studio's Publish action),
+ * 4. it is listed in the local `detailPages` configuration (permanent record for projects featured in code).
+ * Projects that were never activated get no page. Repositories in `retiredDetailPages` never get one.
  *
- * Slugs: local configuration → Sanity `slug` → generated from the repository name. Stored slugs are claimed first,
- * so a generated slug can never take a stored one. A collision never fails the build: the later project gets a
- * numeric suffix and a warning.
+ * Slugs: published slug (live manifest) → local configuration → Sanity `slug` → generated from the repository name.
+ * Published and stored slugs are claimed first and retired slugs stay reserved, so a new project can never take an
+ * existing URL: on a collision only the NEW project gets a numeric suffix (with a warning). The deploy guard
+ * (src/lib/page-manifest.ts) refuses any build that would still change or drop a published page.
  */
 import type { Accent, ProjectImage } from '../config/projects.ts';
 import { emptyDetails, type ProjectDetails } from './project-details.ts';
@@ -26,35 +28,56 @@ export interface ProjectPage {
   image?: ProjectImage;
   details: ProjectDetails;
   /** Why the page exists (for diagnostics and tests). */
-  reason: 'featured' | 'sanity' | 'config';
+  reason: 'featured' | 'published' | 'sanity' | 'config';
 }
 
 export function selectProjectPages(input: {
   visible: VisibleEntry[];
   overrides: Map<string, EditorialOverride>;
   localPages: Record<string, string>;
+  /** Pages of the live site (repository → slug), from its page manifest; empty if unknown. */
+  publishedPages?: Record<string, string>;
+  /** Pages explicitly and permanently removed (repository → slug); their slugs stay reserved. */
+  retiredPages?: Record<string, string>;
 }): { pages: ProjectPage[]; warnings: string[] } {
   const warnings: string[] = [];
   const local = new Map(Object.entries(input.localPages).map(([repo, slug]) => [repoKey(repo), slug]));
+  const published = new Map(Object.entries(input.publishedPages ?? {}).map(([repo, slug]) => [repoKey(repo), slug]));
+  const retired = new Map(Object.entries(input.retiredPages ?? {}).map(([repo, slug]) => [repoKey(repo), slug]));
 
   type Candidate = { entry: VisibleEntry; override?: EditorialOverride; reason: ProjectPage['reason']; stored: { slug: string; rank: number } | null };
   const candidates: Candidate[] = [];
   for (const entry of input.visible) {
     const k = repoKey(entry.project.name);
     const override = input.overrides.get(k);
-    const reason = entry.project.featured ? 'featured' : override?.detailPageEnabled === true ? 'sanity' : local.has(k) ? 'config' : null;
+    if (retired.has(k)) continue;
+    const reason = entry.project.featured
+      ? 'featured'
+      : published.has(k)
+        ? 'published'
+        : override?.detailPageEnabled === true
+          ? 'sanity'
+          : local.has(k)
+            ? 'config'
+            : null;
     if (!reason) continue;
 
     let stored: Candidate['stored'] = null;
+    const publishedSlug = published.get(k);
+    if (publishedSlug !== undefined && isValidProjectSlug(publishedSlug)) stored = { slug: publishedSlug, rank: 0 };
     const localSlug = local.get(k);
     if (localSlug !== undefined) {
-      if (isValidProjectSlug(localSlug)) stored = { slug: localSlug, rank: 0 };
-      else warnings.push(`Detail page: invalid slug "${localSlug}" for ${entry.project.name} in the local configuration – ignored`);
+      if (!isValidProjectSlug(localSlug)) warnings.push(`Detail page: invalid slug "${localSlug}" for ${entry.project.name} in the local configuration – ignored`);
+      else if (!stored) stored = { slug: localSlug, rank: 1 };
+      else if (localSlug !== stored.slug) {
+        warnings.push(`Detail page: configured slug "${localSlug}" for ${entry.project.name} differs from the published "${stored.slug}" – keeping the published URL`);
+      }
     }
     if (override?.slug) {
-      if (!stored) stored = { slug: override.slug, rank: 1 };
+      if (!stored) stored = { slug: override.slug, rank: 2 };
       else if (override.slug !== stored.slug) {
-        warnings.push(`Detail page: Sanity slug "${override.slug}" for ${entry.project.name} differs from the configured "${stored.slug}" – using the configured one`);
+        const source = stored.rank === 0 ? 'published' : 'configured';
+        warnings.push(`Detail page: Sanity slug "${override.slug}" for ${entry.project.name} differs from the ${source} "${stored.slug}" – using the ${source} one`);
       }
     }
     if (!stored && entry.project.featured) {
@@ -65,13 +88,14 @@ export function selectProjectPages(input: {
     candidates.push({ entry, override, reason, stored });
   }
 
-  // Claim order: stored local slugs, stored Sanity slugs, generated slugs; each group by repository name.
+  // Claim order: published slugs, local slugs, Sanity slugs, generated slugs; each group by repository name.
   // Code-point comparison: deterministic regardless of the build machine's locale.
-  const rank = (c: Candidate) => c.stored?.rank ?? 2;
+  const rank = (c: Candidate) => c.stored?.rank ?? 3;
   const byName = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
   candidates.sort((a, b) => rank(a) - rank(b) || byName(repoKey(a.entry.project.name), repoKey(b.entry.project.name)));
 
-  const taken = new Set<string>();
+  // Retired slugs stay reserved: a removed page's URL is never handed to another project.
+  const taken = new Set<string>([...retired.values()]);
   const pages: ProjectPage[] = [];
   for (const c of candidates) {
     const base = c.stored?.slug ?? slugifyProjectName(c.entry.project.name);

@@ -2,14 +2,26 @@
  * Decides whether the scheduled workflow has to rebuild and redeploy the site, and verifies before deploying that
  * a build is still the newest one. Used by scripts/deploy-check.ts in .github/workflows/deploy.yml.
  *
- * The live site publishes /build-info.json (commit + content fingerprint of what it was built from). A rebuild is
- * needed when the code on main or the visible Sanity content differs from it. Failures never count as
- * "unchanged": an unreachable Sanity fails the check, an unreadable live build-info.json triggers a rebuild.
+ * The live site publishes /build-info.json (commit + content fingerprint of what it was built from) and
+ * /projects/pages.json (page manifest with the release each project page shows). A rebuild is needed when the code
+ * on main, the visible Sanity content or a project's latest GitHub release differs from it. Failures never count as
+ * "unchanged": an unreachable Sanity or GitHub fails the check, an unreadable live build-info.json triggers a rebuild.
+ * Before deploying, guardPages makes sure no published project page disappears or changes its URL.
  *
  * Plain Node, no runtime dependencies (the check job runs without `npm ci`); network access is injected for tests.
  */
 import { readBlogConfig } from './blog/config.ts';
 import { computeFingerprint, fingerprintQuery, type ContentFingerprint } from './content-fingerprint.ts';
+import { fetchLatestRelease, type LatestRelease } from './github-releases.ts';
+import {
+  compareManifests,
+  manifestRepoKey,
+  parseManifest,
+  resolveLiveManifest,
+  type LiveManifest,
+  type LiveSiteState,
+  type ManifestPage,
+} from './page-manifest.ts';
 
 export const BUILD_INFO_PATH = '/build-info.json';
 /** Bump when the build-info.json format changes; the next scheduled check then rebuilds once. */
@@ -27,6 +39,11 @@ export interface BuildInfo {
   builtAt: string;
   /** Fingerprint of the Sanity content the build rendered; null if the blog was not built from Sanity. */
   content: ContentFingerprint | null;
+  /**
+   * Schema version of the page manifest (/projects/pages.json) this build published. Absent on sites built before
+   * manifests – the only situation in which a missing live manifest is accepted (src/lib/page-manifest.ts).
+   */
+  manifest?: number;
 }
 
 export type LiveBuildInfo =
@@ -44,8 +61,8 @@ type Fetch = typeof fetch;
 const short = (sha: string | null) => (sha ? sha.slice(0, 7) : 'none');
 const isSha = (v: unknown): v is string => typeof v === 'string' && /^[0-9a-f]{40}$/.test(v);
 
-export function createBuildInfo(commit: string | undefined, content: ContentFingerprint | null, now = new Date()): BuildInfo {
-  return { schema: BUILD_INFO_SCHEMA, commit: isSha(commit) ? commit : null, builtAt: now.toISOString(), content };
+export function createBuildInfo(commit: string | undefined, content: ContentFingerprint | null, now = new Date(), manifest?: number): BuildInfo {
+  return { schema: BUILD_INFO_SCHEMA, commit: isSha(commit) ? commit : null, builtAt: now.toISOString(), content, ...(manifest !== undefined && { manifest }) };
 }
 
 export function parseBuildInfo(json: unknown): BuildInfo | null {
@@ -55,7 +72,8 @@ export function parseBuildInfo(json: unknown): BuildInfo | null {
   const contentOk =
     c === null ||
     (typeof c === 'object' && typeof c.version === 'number' && typeof c.hash === 'string' && typeof c.count === 'number' && Array.isArray(c.types));
-  if (typeof v.schema !== 'number' || !(v.commit === null || isSha(v.commit)) || typeof v.builtAt !== 'string' || !contentOk) return null;
+  const manifestOk = v.manifest === undefined || (typeof v.manifest === 'number' && Number.isInteger(v.manifest) && v.manifest > 0);
+  if (typeof v.schema !== 'number' || !(v.commit === null || isSha(v.commit)) || typeof v.builtAt !== 'string' || !contentOk || !manifestOk) return null;
   return v as unknown as BuildInfo;
 }
 
@@ -145,4 +163,121 @@ export async function fetchLiveBuildInfo(siteUrl: string, { fetchImpl = fetch }:
   } catch (err) {
     return { state: 'unreadable', reason: err instanceof Error ? err.message : String(err) };
   }
+}
+
+// ── Page manifest guard ──────────────────────────────────────────────────────────────────────────────────────────
+
+/** What the live build info says about page manifests (bootstrap rule, see resolveLiveManifest). */
+export function liveSiteState(live: LiveBuildInfo): LiveSiteState {
+  if (live.state === 'missing') return 'no-site';
+  if (live.state === 'unreadable') return 'unknown';
+  return live.info.manifest !== undefined ? 'uses-manifest' : 'pre-manifest';
+}
+
+/**
+ * Deployment guard for a built page manifest (dist/projects/pages.json) against the live site. Refuses when the new
+ * manifest is malformed, when the live manifest can't be read reliably on a site that uses manifests, and when
+ * compareManifests finds a problem. There is no override; the only permitted page removal is retiredDetailPages.
+ */
+export function guardPages(input: {
+  next: unknown;
+  liveInfo: LiveBuildInfo;
+  liveManifest: LiveManifest;
+  retired: Record<string, string>;
+}): { deploy: boolean; reason: string; problems: string[] } {
+  const parsed = parseManifest(input.next);
+  if (!parsed.ok) return { deploy: false, reason: `the build's page manifest is invalid (${parsed.reason})`, problems: [parsed.reason] };
+
+  const retiredBySlug = new Map(Object.entries(input.retired).map(([repo, slug]) => [slug, repo]));
+  const reused = parsed.manifest.pages.filter((p) => retiredBySlug.has(p.slug) && manifestRepoKey(retiredBySlug.get(p.slug)!) !== manifestRepoKey(p.repo));
+  if (reused.length) {
+    const problems = reused.map((p) => `retired slug "${p.slug}" is used by ${p.repo}`);
+    return { deploy: false, reason: problems.join('; '), problems };
+  }
+
+  const live = resolveLiveManifest(liveSiteState(input.liveInfo), input.liveManifest);
+  if (live.state === 'refuse') return { deploy: false, reason: live.reason, problems: [live.reason] };
+  const pages = parsed.manifest.pages.length;
+  if (live.state === 'bootstrap') return { deploy: true, reason: `${live.reason} – publishing ${pages} page(s)`, problems: [] };
+
+  const { ok, problems } = compareManifests({ live: live.manifest, next: parsed.manifest, retired: input.retired });
+  if (!ok) return { deploy: false, reason: `${problems.length} published page problem(s): ${problems.join('; ')}`, problems };
+  const added = pages - live.manifest.pages.filter((p) => parsed.manifest.pages.some((n) => manifestRepoKey(n.repo) === manifestRepoKey(p.repo))).length;
+  return { deploy: true, reason: `all ${live.manifest.pages.length} published page(s) kept${added > 0 ? `, ${added} new` : ''}`, problems: [] };
+}
+
+// ── Release change detection (15-minute check) ──────────────────────────────────────────────────────────────────
+
+export type ReleaseLookup = { ok: true; release: LatestRelease | null } | { ok: false; reason: string };
+
+/**
+ * Compares the release each live page shows (by GitHub release ID, so a replaced release with the same tag counts)
+ * with GitHub's current latest release. Removed releases count as changes. Any lookup failure makes the answer
+ * "unknown" – never "unchanged" – unless another page already changed (then a build happens anyway).
+ */
+export function decideReleases(pages: ManifestPage[], current: Map<string, ReleaseLookup>): { state: 'unchanged' | 'changed' | 'unknown'; reason: string } {
+  const changes: string[] = [];
+  const failures: string[] = [];
+  for (const page of pages) {
+    const now = current.get(manifestRepoKey(page.repo));
+    if (!now) {
+      failures.push(`${page.repo}: not checked`);
+      continue;
+    }
+    if (!now.ok) {
+      failures.push(`${page.repo}: ${now.reason}`);
+      continue;
+    }
+    const before = page.release;
+    const after = now.release;
+    if ((before?.id ?? null) === (after?.id ?? null)) continue;
+    changes.push(`${page.repo}: ${before ? `${before.version} (#${before.id})` : 'none'} → ${after ? `${after.version} (#${after.id})` : 'none'}`);
+  }
+  if (changes.length) return { state: 'changed', reason: `release changed (${changes.join(', ')})` };
+  if (failures.length) return { state: 'unknown', reason: `release status could not be determined (${failures.join('; ')})` };
+  return { state: 'unchanged', reason: `releases unchanged (${pages.length} page(s))` };
+}
+
+/** One /releases/latest request per page repository (the same call the build uses), with a retry on failure. */
+export async function fetchCurrentReleases(
+  owner: string,
+  pages: ManifestPage[],
+  { token, fetchRelease = fetchLatestRelease, attempts = 2, delayMs = 2_000 }: { token?: string; fetchRelease?: typeof fetchLatestRelease; attempts?: number; delayMs?: number } = {},
+): Promise<Map<string, ReleaseLookup>> {
+  const result = new Map<string, ReleaseLookup>();
+  for (const page of pages) {
+    let lookup: ReleaseLookup = { ok: false, reason: 'not attempted' };
+    for (let attempt = 1; attempt <= attempts; attempt++) {
+      try {
+        lookup = { ok: true, release: await fetchRelease(owner, page.repo, { token }) };
+        break;
+      } catch (err) {
+        lookup = { ok: false, reason: err instanceof Error ? err.message : String(err) };
+        if (attempt < attempts) await new Promise((r) => setTimeout(r, delayMs * attempt));
+      }
+    }
+    result.set(manifestRepoKey(page.repo), lookup);
+  }
+  return result;
+}
+
+/**
+ * The scheduled check: code / Sanity decision first; only if nothing changed (and the run is not forced) are the
+ * live page manifest and GitHub releases consulted. Throws instead of reporting "no changes" when the release state
+ * can't be determined (unreadable manifest on a site that uses one, or a failed GitHub lookup).
+ */
+export async function decideWithReleases(input: {
+  base: Decision;
+  liveInfo: LiveBuildInfo;
+  loadManifest: () => Promise<LiveManifest>;
+  loadReleases: (pages: ManifestPage[]) => Promise<Map<string, ReleaseLookup>>;
+}): Promise<Decision> {
+  const { base } = input;
+  if (base.changed) return base; // manual run, daily refresh, code or Sanity change: builds anyway, no API calls
+  const resolved = resolveLiveManifest(liveSiteState(input.liveInfo), await input.loadManifest());
+  if (resolved.state === 'refuse') throw new Error(`Release check impossible: ${resolved.reason}. Not reporting "no changes".`);
+  if (resolved.state === 'bootstrap') return { changed: false, reason: `${base.reason}; release check skipped (${resolved.reason})` };
+  const releases = decideReleases(resolved.manifest.pages, await input.loadReleases(resolved.manifest.pages));
+  if (releases.state === 'unknown') throw new Error(`${releases.reason} – not reporting "no changes"; the next check retries.`);
+  return releases.state === 'changed' ? { changed: true, reason: releases.reason } : { changed: false, reason: `${base.reason}; ${releases.reason}` };
 }

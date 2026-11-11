@@ -37,8 +37,9 @@ import {
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const { categories, defaultCategory, featuredProjects, listSettings, projectOverrides } = projectConfig;
-const fallback = JSON.parse(readFileSync(join(root, 'src/data/fallback-repos.json'), 'utf8')) as { fetchedAt: string; repos: RepoData[] };
+const fallback = JSON.parse(readFileSync(join(root, 'tests/fixtures/fallback-repos-2026-11-02.json'), 'utf8')) as { fetchedAt: string; repos: RepoData[] };
 const repo = (name: string): RepoData => ({ name, url: `https://github.com/PeriBluGaming/${name}`, description: null, language: 'C', stars: 0, fork: false, archived: false, pushedAt: '2026-11-03T16:10:16Z', topics: [] });
+// Frozen snapshot (as of 2026-11-02, without SledStorm): the migration plan was reviewed against this inventory.
 const inventory = [...fallback.repos, repo('SledStormPSXRecomp'), repo('PeriBluGaming.github.io')];
 const READ_TOKEN = 'skTESTreadToken0123456789abcdef';
 const WRITE_TOKEN = 'skTESTwriteToken9876543210fedcba';

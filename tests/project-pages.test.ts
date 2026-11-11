@@ -10,8 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { categories, defaultCategory, detailPages, featureIcons, featuredProjects, listSettings, projectOverrides } from '../src/config/projects.ts';
 import type { BlogConfig } from '../src/lib/blog/config.ts';
 import type { ImageResolver } from '../src/lib/blog/normalize.ts';
-import { createReleaseLoader, fetchLatestRelease, normalizeRelease } from '../src/lib/github-releases.ts';
-import { GitHubApiError, type RepoData } from '../src/lib/github.ts';
+import type { RepoData } from '../src/lib/github.ts';
 import { buildProjectData, type ProjectSources } from '../src/lib/project-data.ts';
 import { normalizeProjectDetails } from '../src/lib/project-details.ts';
 import { validateProjectImage } from '../src/lib/project-image.ts';
@@ -424,87 +423,4 @@ describe('buildProjectData: detail pages', () => {
   });
 });
 
-// ── Latest release ─────────────────────────────────────────────────────────────────────────────────────────────
-
-const apiRelease = {
-  tag_name: 'v1.2.0',
-  name: 'Toy Story 2 Recomp v1.2.0',
-  html_url: 'https://github.com/PeriBluGaming/ToyStory2Recomp/releases/tag/v1.2.0',
-  published_at: '2026-10-30T12:00:00Z',
-  draft: false,
-  prerelease: false,
-  assets: [{ browser_download_url: 'https://example.com/x.zip' }],
-};
-const response = (status: number, body: unknown = {}, headers: Record<string, string> = {}) =>
-  new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', ...headers } });
-
-describe('latest GitHub release', () => {
-  it('keeps only version, name, date and the release page URL', () => {
-    assert.deepEqual(normalizeRelease(apiRelease, 'PeriBluGaming', 'ToyStory2Recomp'), {
-      version: 'v1.2.0',
-      name: 'Toy Story 2 Recomp v1.2.0',
-      publishedAt: '2026-10-30T12:00:00.000Z',
-      url: 'https://github.com/PeriBluGaming/ToyStory2Recomp/releases/tag/v1.2.0',
-    });
-    assert.equal(normalizeRelease({ ...apiRelease, name: 'v1.2.0', published_at: null }, 'PeriBluGaming', 'ToyStory2Recomp')?.name, undefined);
-  });
-
-  it('rejects drafts, prereleases, foreign URLs and incomplete data', () => {
-    for (const bad of [
-      { ...apiRelease, draft: true },
-      { ...apiRelease, prerelease: true },
-      { ...apiRelease, html_url: 'https://evil.com/PeriBluGaming/ToyStory2Recomp/releases/tag/v1' },
-      { ...apiRelease, html_url: 'https://github.com/Other/ToyStory2Recomp/releases/tag/v1' },
-      { ...apiRelease, html_url: 'javascript:alert(1)' },
-      { ...apiRelease, tag_name: '' },
-      null,
-    ]) {
-      assert.equal(normalizeRelease(bad, 'PeriBluGaming', 'ToyStory2Recomp'), null);
-    }
-  });
-
-  it('requests /releases/latest and returns null when there is no release (404)', async () => {
-    const urls: string[] = [];
-    const ok = await fetchLatestRelease('PeriBluGaming', 'ToyStory2Recomp', {
-      token: 't',
-      fetchImpl: (async (url: string, init: RequestInit) => {
-        urls.push(url);
-        assert.equal((init.headers as Record<string, string>).Authorization, 'Bearer t');
-        return response(200, apiRelease);
-      }) as typeof fetch,
-    });
-    assert.equal(ok?.version, 'v1.2.0');
-    assert.deepEqual(urls, ['https://api.github.com/repos/PeriBluGaming/ToyStory2Recomp/releases/latest']);
-    assert.equal(await fetchLatestRelease('PeriBluGaming', 'NoRelease', { fetchImpl: (async () => response(404)) as unknown as typeof fetch }), null);
-  });
-
-  it('throws on API errors (the loader turns them into "no release")', async () => {
-    await assert.rejects(
-      fetchLatestRelease('PeriBluGaming', 'X', { fetchImpl: (async () => response(403, {}, { 'x-ratelimit-remaining': '0' })) as unknown as typeof fetch }),
-      (err: unknown) => err instanceof GitHubApiError && err.rateLimited,
-    );
-  });
-
-  it('loader: never fails the build, caches per repository, skips the API offline', async () => {
-    const warnings: string[] = [];
-    let calls = 0;
-    const load = createReleaseLoader({
-      owner: 'PeriBluGaming',
-      env: {},
-      fetchRelease: async (_o, repo) => {
-        calls++;
-        if (repo === 'Broken') throw new Error('socket hang up');
-        return normalizeRelease(apiRelease, 'PeriBluGaming', 'ToyStory2Recomp');
-      },
-      log: { warn: (m: string) => warnings.push(m) },
-    });
-    assert.equal(await load('Broken'), null);
-    assert.match(warnings[0], /Broken unavailable \(socket hang up\)/);
-    assert.equal((await load('ToyStory2Recomp'))?.version, 'v1.2.0');
-    await load('toystory2recomp');
-    assert.equal(calls, 2);
-
-    const offline = createReleaseLoader({ owner: 'PeriBluGaming', env: { GITHUB_OFFLINE: '1' }, fetchRelease: async () => assert.fail('no request') });
-    assert.equal(await offline('ToyStory2Recomp'), null);
-  });
-});
+// Release fetching, resilience and the page manifest guard: tests/page-manifest.test.ts.

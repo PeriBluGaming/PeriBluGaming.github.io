@@ -57,6 +57,10 @@ export interface ProjectSources {
   resolveLocalImage: (image: ProjectImage, repo: string) => ProjectImage;
   /** Permanent local detail-page records: repository → slug (src/config/projects.ts → detailPages). */
   detailPages?: Record<string, string>;
+  /** Pages intentionally removed: repository → slug (src/config/projects.ts → retiredDetailPages). */
+  retiredPages?: Record<string, string>;
+  /** Pages the live site publishes (repository → slug, from /projects/pages.json); kept with their slugs. */
+  publishedPages?: () => Promise<Record<string, string>>;
   /** Image resolver for detail page content (features, gallery, long description). Without it: no Sanity details. */
   detailImageResolver?: (config: SanityConfig) => ImageResolver;
   log?: Pick<Console, 'warn'>;
@@ -127,7 +131,14 @@ export async function buildProjectData(s: ProjectSources): Promise<ProjectData> 
   const merged = mergeProjects({ repos, overrides, config: s.config, resolveLocalImage: s.resolveLocalImage });
   merged.warnings.forEach((w) => log.warn(`[projects] ${w}`));
 
-  const { pages, warnings } = selectProjectPages({ visible: merged.visible, overrides, localPages: s.detailPages ?? {} });
+  const publishedPages = (await s.publishedPages?.()) ?? {};
+  const { pages, warnings } = selectProjectPages({
+    visible: merged.visible,
+    overrides,
+    localPages: s.detailPages ?? {},
+    publishedPages,
+    retiredPages: s.retiredPages ?? {},
+  });
   warnings.forEach((w) => log.warn(`[projects] ${w}`));
   const pathByName = new Map(pages.map((p) => [p.project.name, p.path]));
   const withPath = <T extends Project>(p: T): T => (pathByName.has(p.name) ? { ...p, detailPath: pathByName.get(p.name) } : p);

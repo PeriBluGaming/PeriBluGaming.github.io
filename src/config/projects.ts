@@ -131,6 +131,14 @@ export const detailPages: Record<string, string> = {
   romm2switch: 'romm2switch',
 };
 
+/**
+ * Detail pages that are removed on purpose – repository → its published slug. The ONLY way to take a published page
+ * offline: the deploy guard refuses any build that drops a published page unless it is listed here with the same
+ * slug. The slug stays reserved and is never reused. Un-featuring or "Hide on website" alone never removes a page.
+ * See docs/project-pages.md → "Removing a page on purpose".
+ */
+export const retiredDetailPages: Record<string, string> = {};
+
 /** Icons editors can pick for a detail-page feature card without an image (names from src/components/Icon.astro). */
 export const featureIcons = [
   { title: 'Gamepad', value: 'gamepad' },
