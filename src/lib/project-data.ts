@@ -8,6 +8,7 @@
  */
 import type { Category, ProjectImage } from '../config/projects.ts';
 import type { BlogConfig } from './blog/config.ts';
+import type { ImageResolver } from './blog/normalize.ts';
 import type { ContentItem } from './content-fingerprint.ts';
 import { GitHubApiError, type RepoData } from './github.ts';
 import {
@@ -19,6 +20,7 @@ import {
   type MergeConfig,
   type Project,
 } from './project-merge.ts';
+import { selectProjectPages, type ProjectPage } from './project-pages.ts';
 
 export type SanityProjectsStatus = 'disabled' | 'sanity' | 'unavailable';
 
@@ -27,6 +29,8 @@ export interface ProjectData {
   all: Project[];
   /** Categories that contain at least one project, in configured order. */
   categories: Category[];
+  /** Detail pages (/projects/<slug>/): featured projects plus every previously activated one. */
+  pages: ProjectPage[];
   source: 'github' | 'fallback';
   fetchedAt: string;
   /** Whether Sanity overrides were applied ("sanity"), not configured or unavailable (local configuration only). */
@@ -51,6 +55,10 @@ export interface ProjectSources {
   fetchSanityProjects: (config: SanityConfig) => Promise<unknown>;
   screenshotResolver: (config: SanityConfig) => (shot: unknown) => ProjectImage | null;
   resolveLocalImage: (image: ProjectImage, repo: string) => ProjectImage;
+  /** Permanent local detail-page records: repository → slug (src/config/projects.ts → detailPages). */
+  detailPages?: Record<string, string>;
+  /** Image resolver for detail page content (features, gallery, long description). Without it: no Sanity details. */
+  detailImageResolver?: (config: SanityConfig) => ImageResolver;
   log?: Pick<Console, 'warn'>;
 }
 
@@ -96,10 +104,11 @@ async function loadOverrides(
   }
 
   const resolveImage = s.screenshotResolver(config);
+  const resolveDetailImage = s.detailImageResolver?.(config);
   const categoryIds = new Set(s.config.categories.map((c) => c.id));
   const valid: EditorialOverride[] = [];
   for (const doc of raw) {
-    const { override, warnings } = normalizeSanityProject(doc, { categoryIds, resolveImage });
+    const { override, warnings } = normalizeSanityProject(doc, { categoryIds, resolveImage, resolveDetailImage });
     warnings.forEach((w) => log.warn(`[projects] ${w}`));
     if (override) valid.push(override);
   }
@@ -115,7 +124,22 @@ async function loadOverrides(
 export async function buildProjectData(s: ProjectSources): Promise<ProjectData> {
   const log = s.log ?? console;
   const [{ repos, source, fetchedAt }, { status, overrides, contentItems }] = await Promise.all([loadRepos(s), loadOverrides(s)]);
-  const { featured, all, categories, warnings } = mergeProjects({ repos, overrides, config: s.config, resolveLocalImage: s.resolveLocalImage });
+  const merged = mergeProjects({ repos, overrides, config: s.config, resolveLocalImage: s.resolveLocalImage });
+  merged.warnings.forEach((w) => log.warn(`[projects] ${w}`));
+
+  const { pages, warnings } = selectProjectPages({ visible: merged.visible, overrides, localPages: s.detailPages ?? {} });
   warnings.forEach((w) => log.warn(`[projects] ${w}`));
-  return { featured, all, categories, source, fetchedAt, overrides: status, ...(contentItems && { contentItems }) };
+  const pathByName = new Map(pages.map((p) => [p.project.name, p.path]));
+  const withPath = <T extends Project>(p: T): T => (pathByName.has(p.name) ? { ...p, detailPath: pathByName.get(p.name) } : p);
+
+  return {
+    featured: merged.featured.map(withPath),
+    all: merged.all.map(withPath),
+    categories: merged.categories,
+    pages: pages.map((p) => ({ ...p, project: withPath(p.project) })),
+    source,
+    fetchedAt,
+    overrides: status,
+    ...(contentItems && { contentItems }),
+  };
 }

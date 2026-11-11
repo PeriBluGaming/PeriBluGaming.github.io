@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://periblugaming.github.io/sitemap.xml

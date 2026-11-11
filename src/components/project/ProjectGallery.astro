@@ -1,0 +1,311 @@
+---
+/**
+ * Screenshot gallery (three columns on desktop, two on mobile) with an accessible lightbox.
+ *
+ * Progressive enhancement: every thumbnail is a link to the large image, so it works without JavaScript. With
+ * JavaScript, a native modal <dialog> opens instead – the rest of the page is inert while it is open, Escape closes
+ * it, focus moves into it and returns to the thumbnail afterwards. Previous/next buttons, arrow keys and horizontal
+ * swipes navigate; page scrolling is locked while open.
+ */
+import type { GalleryImage } from '../../lib/project-details';
+import Icon from '../Icon.astro';
+import PostImage from '../blog/PostImage.astro';
+
+interface Props {
+  images: GalleryImage[];
+}
+
+const { images } = Astro.props;
+---
+
+<div class="gallery" data-gallery>
+  <ul class="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3">
+    {
+      images.map((item, i) => (
+        <li>
+          <figure>
+            <a
+              href={item.full}
+              class="thumb"
+              aria-haspopup="dialog"
+              data-index={i}
+              data-full={item.full}
+              data-alt={item.thumb.alt}
+              data-caption={item.caption}
+              data-width={item.thumb.width}
+              data-height={item.thumb.height}
+            >
+              <PostImage image={item.thumb} sizes="(min-width: 1024px) 360px, 50vw" />
+              <span class="sr-only">
+                (open screenshot {i + 1} of {images.length})
+              </span>
+            </a>
+            {item.caption && <figcaption>{item.caption}</figcaption>}
+          </figure>
+        </li>
+      ))
+    }
+  </ul>
+
+  <dialog class="lightbox" aria-label="Screenshot viewer" aria-describedby="lightbox-counter" data-lightbox>
+    <div class="lb-stage" data-lb-stage>
+      <figure class="lb-figure">
+        <img data-lb-img alt="" />
+        <figcaption data-lb-caption></figcaption>
+      </figure>
+    </div>
+    <p id="lightbox-counter" class="lb-counter" data-lb-counter aria-live="polite"></p>
+    <button type="button" class="lb-btn lb-close" data-lb-close aria-label="Close screenshot viewer">
+      <Icon name="close" class="size-6" />
+    </button>
+    {
+      images.length > 1 && (
+        <>
+          <button type="button" class="lb-btn lb-prev" data-lb-prev aria-label="Previous screenshot">
+            <Icon name="arrow-right" class="size-6 rotate-180" />
+          </button>
+          <button type="button" class="lb-btn lb-next" data-lb-next aria-label="Next screenshot">
+            <Icon name="arrow-right" class="size-6" />
+          </button>
+        </>
+      )
+    }
+  </dialog>
+</div>
+
+<script>
+  const SWIPE_DISTANCE = 50;
+
+  for (const root of document.querySelectorAll<HTMLElement>('[data-gallery]')) {
+    const dialog = root.querySelector<HTMLDialogElement>('[data-lightbox]');
+    const thumbs = [...root.querySelectorAll<HTMLAnchorElement>('a[data-index]')];
+    if (!dialog || typeof dialog.showModal !== 'function' || thumbs.length === 0) continue;
+
+    const img = dialog.querySelector<HTMLImageElement>('[data-lb-img]')!;
+    const caption = dialog.querySelector<HTMLElement>('[data-lb-caption]')!;
+    const counter = dialog.querySelector<HTMLElement>('[data-lb-counter]')!;
+    const stage = dialog.querySelector<HTMLElement>('[data-lb-stage]')!;
+    const closeBtn = dialog.querySelector<HTMLButtonElement>('[data-lb-close]')!;
+    let current = 0;
+    let opener: HTMLElement | null = null;
+
+    const show = (index: number) => {
+      current = (index + thumbs.length) % thumbs.length;
+      const t = thumbs[current].dataset;
+      img.src = t.full ?? '';
+      img.alt = t.alt ?? '';
+      if (t.width && t.height) {
+        img.width = Number(t.width);
+        img.height = Number(t.height);
+      } else {
+        img.removeAttribute('width');
+        img.removeAttribute('height');
+      }
+      caption.textContent = t.caption ?? '';
+      caption.hidden = !t.caption;
+      counter.textContent = `Screenshot ${current + 1} of ${thumbs.length}`;
+    };
+
+    const open = (index: number) => {
+      opener = thumbs[index];
+      show(index);
+      document.documentElement.classList.add('lightbox-open');
+      dialog.showModal();
+      closeBtn.focus();
+    };
+
+    thumbs.forEach((thumb, i) =>
+      thumb.addEventListener('click', (event) => {
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return; // new tab etc. still work
+        event.preventDefault();
+        open(i);
+      }),
+    );
+
+    dialog.addEventListener('close', () => {
+      document.documentElement.classList.remove('lightbox-open');
+      img.removeAttribute('src');
+      opener?.focus();
+    });
+    closeBtn.addEventListener('click', () => dialog.close());
+    dialog.querySelector('[data-lb-prev]')?.addEventListener('click', () => show(current - 1));
+    dialog.querySelector('[data-lb-next]')?.addEventListener('click', () => show(current + 1));
+
+    dialog.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowLeft') show(current - 1);
+      else if (event.key === 'ArrowRight') show(current + 1);
+      else return;
+      event.preventDefault();
+    });
+
+    // Click on the dark backdrop (outside the image and controls) closes.
+    dialog.addEventListener('click', (event) => {
+      if (event.target === dialog || event.target === stage) dialog.close();
+    });
+
+    // Horizontal swipe (touch / pen) navigates; vertical movement is left alone.
+    let startX = 0;
+    let startY = 0;
+    let tracking = false;
+    stage.addEventListener('pointerdown', (event) => {
+      if (event.pointerType === 'mouse') return;
+      tracking = true;
+      startX = event.clientX;
+      startY = event.clientY;
+    });
+    stage.addEventListener('pointerup', (event) => {
+      if (!tracking) return;
+      tracking = false;
+      const dx = event.clientX - startX;
+      const dy = event.clientY - startY;
+      if (Math.abs(dx) >= SWIPE_DISTANCE && Math.abs(dx) > Math.abs(dy) && thumbs.length > 1) show(current + (dx < 0 ? 1 : -1));
+    });
+    stage.addEventListener('pointercancel', () => (tracking = false));
+  }
+</script>
+
+<style>
+  .thumb {
+    position: relative;
+    display: block;
+    overflow: hidden;
+    aspect-ratio: 16 / 9;
+    border-radius: 10px;
+    border: 1px solid var(--color-line);
+    background: var(--color-ink-2);
+    transition:
+      border-color 0.25s,
+      box-shadow 0.25s;
+  }
+  .thumb:hover,
+  .thumb:focus-visible {
+    border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+    box-shadow: 0 0 16px color-mix(in srgb, var(--accent) 22%, transparent);
+  }
+  /* contain: never crop or distort – screenshots keep their aspect ratio inside the 16:9 frame. */
+  .thumb :global(img) {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transition: transform 0.3s ease;
+  }
+  .thumb:hover :global(img) {
+    transform: scale(1.03);
+  }
+  figcaption {
+    margin-top: 0.5rem;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    color: var(--color-muted);
+  }
+
+  .lightbox {
+    width: 100vw;
+    height: 100dvh;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #fff;
+  }
+  .lightbox::backdrop {
+    background: rgb(5 6 14 / 0.92);
+  }
+  .lb-stage {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+    padding: 4rem 4.5rem 3.5rem;
+    touch-action: pan-y;
+  }
+  .lb-figure {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 100%;
+    max-height: 100%;
+  }
+  .lb-figure img {
+    display: block;
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: calc(100dvh - 9rem);
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 0 40px rgb(147 101 234 / 0.25);
+    user-select: none;
+  }
+  .lb-figure figcaption {
+    margin-top: 0.85rem;
+    font-size: 0.95rem;
+    color: #d9deea;
+    text-align: center;
+  }
+  .lb-counter {
+    position: absolute;
+    top: 1.35rem;
+    left: 1.25rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--color-muted);
+  }
+  .lb-btn {
+    position: absolute;
+    display: grid;
+    place-items: center;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 999px;
+    border: 1.5px solid rgb(255 255 255 / 0.3);
+    background: rgb(11 13 25 / 0.7);
+    color: #fff;
+    cursor: pointer;
+    transition:
+      border-color 0.2s,
+      box-shadow 0.2s;
+  }
+  .lb-btn:hover {
+    border-color: var(--color-neon-cyan);
+    box-shadow: 0 0 14px rgb(35 217 245 / 0.35);
+  }
+  .lb-close {
+    top: 0.75rem;
+    right: 0.75rem;
+  }
+  .lb-prev,
+  .lb-next {
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  .lb-prev {
+    left: 0.75rem;
+  }
+  .lb-next {
+    right: 0.75rem;
+  }
+  @media (max-width: 640px) {
+    .lb-stage {
+      padding: 4rem 0.75rem 5.5rem;
+    }
+    .lb-prev,
+    .lb-next {
+      top: auto;
+      bottom: 1rem;
+      transform: none;
+    }
+    .lb-prev {
+      left: calc(50% - 3.75rem);
+    }
+    .lb-next {
+      right: calc(50% - 3.75rem);
+    }
+  }
+  :global(html.lightbox-open) {
+    overflow: hidden;
+  }
+</style>

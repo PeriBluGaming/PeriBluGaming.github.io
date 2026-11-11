@@ -11,6 +11,9 @@ interface Props {
 
 const { project } = Astro.props;
 const titleId = `featured-${project.name.toLowerCase()}`;
+// With a detail page, the whole card opens it (title link, stretched); the GitHub link sits above the overlay as a
+// separate control. Without one (should not happen for featured projects) the card links to GitHub as before.
+const detailPath = project.detailPath;
 ---
 
 <article class:list={['featured-card', `accent-${project.accent}`]} aria-labelledby={titleId}>
@@ -20,7 +23,9 @@ const titleId = `featured-${project.name.toLowerCase()}`;
   </div>
 
   <div class="featured-body">
-    <h3 id={titleId} class="text-[1.3rem] leading-tight font-bold tracking-[-0.01em]">{project.title}</h3>
+    <h3 id={titleId} class="text-[1.3rem] leading-tight font-bold tracking-[-0.01em]">
+      {detailPath ? <a href={detailPath} class="card-title-link stretched">{project.title}</a> : project.title}
+    </h3>
 
     {
       project.tags.length > 0 && (
@@ -35,7 +40,7 @@ const titleId = `featured-${project.name.toLowerCase()}`;
     {project.description && <p class="mt-3 text-[0.95rem] leading-[1.45] text-muted">{project.description}</p>}
 
     <div class="mt-auto flex flex-wrap items-center justify-between gap-x-4 gap-y-2 pt-4">
-      <a href={project.url} class="link-arrow stretched" target="_blank" rel="noopener">
+      <a href={project.url} class:list={['link-arrow', detailPath ? 'card-secondary' : 'stretched']} target="_blank" rel="noopener">
         <Icon name="github" class="size-6 text-white" />
         Repository
         <Icon name="arrow-right" class="size-4" />
@@ -83,6 +88,18 @@ const titleId = `featured-${project.name.toLowerCase()}`;
       0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent),
       0 0 26px color-mix(in srgb, var(--accent) 34%, transparent),
       inset 0 0 26px color-mix(in srgb, var(--accent) 9%, transparent);
+  }
+
+  .card-title-link {
+    transition: color 0.2s;
+  }
+  .featured-card:hover .card-title-link {
+    color: color-mix(in srgb, var(--accent) 35%, #fff);
+  }
+  /* Separate control above the card-wide link overlay (.stretched::after). */
+  .card-secondary {
+    position: relative;
+    z-index: 1;
   }
 
   .featured-media {

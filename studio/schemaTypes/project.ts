@@ -1,5 +1,6 @@
 import { defineArrayMember, defineField, defineType } from 'sanity';
-import { categories, type Accent } from '../../src/config/projects.ts';
+import { categories, detailPages, featureIcons, type Accent } from '../../src/config/projects.ts';
+import { slugifyProjectName } from '../../src/lib/project-slug.ts';
 import {
   MAX_TAGS,
   REPO_MAX_LENGTH,
@@ -8,7 +9,10 @@ import {
   validateRepoName,
   validateTag,
   validateTags,
+  validateProjectSlug,
   validateUniqueRepo,
+  validateUniqueSlug,
+  validateYouTubeUrl,
 } from './projectRules.ts';
 
 /** Same accents as the website (src/config/projects.ts); the type check fails if one is missing or unknown. */
@@ -34,6 +38,7 @@ export const project = defineType({
     { name: 'content', title: 'Content', default: true },
     { name: 'display', title: 'Display' },
     { name: 'media', title: 'Screenshots' },
+    { name: 'page', title: 'Detail page' },
   ],
   fields: [
     defineField({
@@ -126,7 +131,7 @@ export const project = defineType({
       type: 'array',
       group: 'media',
       description:
-        'Optional. The first screenshot is used on the featured card: it fills the left art area and is cropped, so set the hotspot on the subject. 16:9, at least 1280 × 720.',
+        'Optional. The first screenshot is used on the featured card and as the detail page hero: it is cropped, so set the hotspot on the subject. All screenshots form the gallery on the detail page. 16:9, at least 1280 × 720.',
       of: [
         defineArrayMember({
           type: 'image',
@@ -139,7 +144,121 @@ export const project = defineType({
               description: 'What the screenshot shows, in one short sentence.',
               validation: (r) => r.required().custom(validateAlt),
             }),
+            defineField({
+              name: 'caption',
+              title: 'Caption',
+              type: 'string',
+              description: 'Optional. Shown below the screenshot in the detail page gallery.',
+              validation: (r) => r.max(200),
+            }),
           ],
+        }),
+      ],
+    }),
+    defineField({
+      name: 'slug',
+      title: 'Page URL',
+      type: 'slug',
+      group: 'page',
+      description:
+        'Optional. /projects/<slug>/ – generated from the repository name when the project is first featured, then kept even if the title or repository changes. Locked once the detail page is live.',
+      options: { source: 'repo', slugify: (input: string) => slugifyProjectName(input) },
+      readOnly: ({ document }) => document?.detailPageEnabled === true && Boolean((document?.slug as { current?: string } | undefined)?.current),
+      validation: (r) =>
+        r
+          .custom(validateProjectSlug)
+          .custom((value, context) =>
+            validateUniqueSlug(value, context.document?._id, context.document?.repo, context.getClient({ apiVersion: '2025-02-19' }), detailPages),
+          ),
+    }),
+    defineField({
+      name: 'detailPageEnabled',
+      title: 'Detail page live',
+      type: 'boolean',
+      group: 'page',
+      description:
+        'Switched on automatically when a featured project is published and never switched off, so the page stays online after the project stops being featured. "Hide on website" still removes it.',
+      readOnly: ({ value }) => value === true,
+    }),
+    defineField({
+      name: 'longDescription',
+      title: 'About the project',
+      type: 'blockContent',
+      group: 'page',
+      description: 'Optional. Extended description for the detail page. Without it the short description is shown.',
+    }),
+    defineField({
+      name: 'features',
+      title: 'Key features',
+      type: 'array',
+      group: 'page',
+      description: 'Optional. Drag to reorder. The section is hidden when empty.',
+      of: [
+        defineArrayMember({
+          type: 'object',
+          name: 'feature',
+          title: 'Feature',
+          fields: [
+            defineField({ name: 'title', title: 'Title', type: 'string', validation: (r) => r.required().max(80) }),
+            defineField({
+              name: 'description',
+              title: 'Description',
+              type: 'text',
+              rows: 3,
+              description: 'Two to four sentences.',
+              validation: (r) => r.max(600),
+            }),
+            defineField({
+              name: 'image',
+              title: 'Image',
+              type: 'image',
+              description: 'Optional. Pick an existing image from the media library to avoid uploading it twice.',
+              options: { hotspot: true },
+              fields: [
+                defineField({
+                  name: 'alt',
+                  title: 'Alternative text',
+                  type: 'string',
+                  validation: (r) => r.custom(validateAlt).custom((alt, context) => {
+                    const parent = context.parent as { asset?: unknown } | undefined;
+                    return parent?.asset && !alt ? 'Describe the image (alternative text is required).' : true;
+                  }),
+                }),
+              ],
+            }),
+            defineField({
+              name: 'icon',
+              title: 'Icon',
+              type: 'string',
+              description: 'Optional. Shown when there is no image.',
+              options: { list: featureIcons.map((i) => ({ title: i.title, value: i.value })) },
+            }),
+          ],
+          preview: { select: { title: 'title', subtitle: 'description', media: 'image' } },
+        }),
+      ],
+    }),
+    defineField({
+      name: 'videos',
+      title: 'Videos',
+      type: 'array',
+      group: 'page',
+      description: 'Optional YouTube videos. The first one is shown large. Players load only after a visitor clicks play.',
+      of: [
+        defineArrayMember({
+          type: 'object',
+          name: 'video',
+          title: 'Video',
+          fields: [
+            defineField({
+              name: 'url',
+              title: 'YouTube URL',
+              type: 'url',
+              validation: (r) => r.required().uri({ scheme: ['https', 'http'] }).custom(validateYouTubeUrl),
+            }),
+            defineField({ name: 'title', title: 'Title', type: 'string', validation: (r) => r.max(120) }),
+          ],
+          preview: { select: { title: 'title', subtitle: 'url' } },
         }),
       ],
     }),

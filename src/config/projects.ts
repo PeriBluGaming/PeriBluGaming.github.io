@@ -114,6 +114,34 @@ export const featuredProjects: FeaturedEntry[] = [
   { repo: 'romm2switch', accent: 'cyan', image: { src: '/images/projects/romm2switch/gameplay.jpg', alt: "Browsing RomM library on the Switch in RomM2Switch.", position: 'center' } },
 ];
 
+/**
+ * Detail pages (/projects/<slug>/) that must stay online – repository → stored slug.
+ *
+ * Every featured project gets a detail page automatically. This list makes that permanent for projects featured
+ * through this file: keep an entry here when a project leaves `featuredProjects`, so its page (and URL) stays.
+ * A test (tests/project-pages.test.ts) fails if a featured repository is missing. Projects featured in Sanity are
+ * recorded on their Sanity document instead (`detailPageEnabled` + `slug`, set by the Studio on publish).
+ * Slugs are lowercase letters, digits and hyphens; never change one after it went live.
+ */
+export const detailPages: Record<string, string> = {
+  ToyStory2Recomp: 'toystory2recomp',
+  BugsBunnyLostinTimeRecomp: 'bugsbunnylostintimerecomp',
+  RescueShotRecomp: 'rescueshotrecomp',
+  SuperMarioWorld2YoshisIslandRecomp: 'supermarioworld2yoshisislandrecomp',
+  romm2switch: 'romm2switch',
+};
+
+/** Icons editors can pick for a detail-page feature card without an image (names from src/components/Icon.astro). */
+export const featureIcons = [
+  { title: 'Gamepad', value: 'gamepad' },
+  { title: 'Processor', value: 'cpu' },
+  { title: 'Monitor', value: 'monitor' },
+  { title: 'Code', value: 'code' },
+  { title: 'Experimental', value: 'flask' },
+  { title: 'Star', value: 'star' },
+] as const;
+export type FeatureIcon = (typeof featureIcons)[number]['value'];
+
 export const listSettings = {
   /** Hide forked repositories in "All Projects" (featured projects are always kept). */
   hideForks: false,

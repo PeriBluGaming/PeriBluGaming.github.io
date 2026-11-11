@@ -1,0 +1,185 @@
+---
+/**
+ * Detail page hero: the project's existing card image (no separate hero image), title, short description,
+ * platform / tag information and the GitHub and latest-release buttons.
+ */
+import type { LatestRelease, ProjectPage } from '../../lib/projects';
+import Icon from '../Icon.astro';
+import PlatformArt from '../PlatformArt.astro';
+import PostImage from '../blog/PostImage.astro';
+
+interface Props {
+  page: ProjectPage;
+  release: LatestRelease | null;
+}
+
+const { page, release } = Astro.props;
+const { project, image, details } = page;
+const position = image?.position ?? 'center';
+---
+
+<header class="hero">
+  <div class="hero-media" style={`--hero-position: ${position}`}>
+    {
+      details.hero ? (
+        <PostImage
+          image={details.hero}
+          sizes="(min-width: 1200px) 1120px, 100vw"
+          class="hero-img"
+          eager
+        />
+      ) : image ? (
+        <img
+          src={image.src}
+          alt={image.alt}
+          width="1280"
+          height="720"
+          loading="eager"
+          fetchpriority="high"
+          decoding="async"
+          class="hero-img"
+        />
+      ) : (
+        <div class="hero-art">
+          <PlatformArt kind={project.category.art} class="w-[60%] max-w-[360px]" />
+        </div>
+      )
+    }
+  </div>
+
+  <div class="mt-8 sm:mt-10">
+    <p class="eyebrow">{project.category.label}</p>
+    <h1 id="project-title" class="mt-2 text-3xl leading-tight font-bold tracking-[-0.01em] sm:text-[2.6rem]">{project.title}</h1>
+    {project.description && <p class="mt-4 max-w-[760px] text-lg leading-relaxed text-muted">{project.description}</p>}
+
+    {
+      (project.tags.length > 0 || project.language) && (
+        <ul class="mt-5 flex flex-wrap items-center gap-2" aria-label="Platform and technology">
+          {project.tags.map((tag) => (
+            <li class="tag">{tag}</li>
+          ))}
+          {project.language && <li class="lang">{project.language}</li>}
+        </ul>
+      )
+    }
+
+    <div class="actions">
+      <a href={project.url} class="btn btn-ghost" target="_blank" rel="noopener">
+        <Icon name="github" class="size-6" />
+        GitHub Repository
+        <span class="sr-only">(opens in a new tab)</span>
+      </a>
+      {
+        release && (
+          <a href={release.url} class="btn btn-primary" target="_blank" rel="noopener">
+            <Icon name="arrow-right" class="size-5 rotate-90 text-neon-cyan" />
+            Latest Release {release.version}
+            <span class="sr-only">(opens in a new tab)</span>
+          </a>
+        )
+      }
+    </div>
+  </div>
+</header>
+
+<style>
+  .hero-media {
+    position: relative;
+    overflow: hidden;
+    aspect-ratio: 16 / 9;
+    border-radius: var(--radius-card);
+    border: 1.5px solid color-mix(in srgb, var(--accent) 80%, transparent);
+    background:
+      radial-gradient(60% 75% at 50% 50%, color-mix(in srgb, var(--accent) 13%, transparent) 0%, transparent 70%),
+      linear-gradient(180deg, #121628 0%, #0d1020 100%);
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--accent) 12%, transparent),
+      0 0 28px color-mix(in srgb, var(--accent) 24%, transparent);
+  }
+  .hero-media :global(.hero-img) {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: var(--hero-position, center);
+  }
+  .hero-art {
+    display: grid;
+    place-items: center;
+    height: 100%;
+  }
+  .eyebrow {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .lang {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding-left: 0.4rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-muted);
+  }
+  .lang::before {
+    content: '';
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 999px;
+    background: var(--accent);
+  }
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.9rem 1.25rem;
+    margin-top: 2rem;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    min-height: 3rem;
+    padding: 0.5rem 1.4rem;
+    border-radius: var(--radius-btn);
+    font-weight: 600;
+    color: #fff;
+    transition:
+      box-shadow 0.25s,
+      transform 0.25s,
+      border-color 0.25s;
+  }
+  .btn:hover {
+    transform: translateY(-1px);
+  }
+  .btn-primary {
+    border: 2px solid transparent;
+    background:
+      linear-gradient(rgb(11 13 25 / 0.9), rgb(11 13 25 / 0.9)) padding-box,
+      linear-gradient(90deg, var(--color-neon-cyan) 0%, #5fc4f7 45%, var(--color-neon-pink) 100%) border-box;
+    box-shadow:
+      0 0 14px rgb(35 217 245 / 0.25),
+      0 0 20px rgb(242 53 165 / 0.1);
+  }
+  .btn-primary:hover {
+    box-shadow:
+      0 0 20px rgb(35 217 245 / 0.4),
+      0 0 26px rgb(242 53 165 / 0.2);
+  }
+  .btn-ghost {
+    border: 2px solid rgb(255 255 255 / 0.85);
+    background: rgb(11 13 25 / 0.6);
+  }
+  .btn-ghost:hover {
+    border-color: #fff;
+    box-shadow: 0 0 16px rgb(255 255 255 / 0.18);
+  }
+  @media (max-width: 480px) {
+    .btn {
+      width: 100%;
+    }
+  }
+</style>

@@ -1,0 +1,64 @@
+---
+/**
+ * Project detail pages: /projects/<slug>/. One static page per project returned by getProjects().pages – every
+ * featured project plus every project that was activated before (src/lib/project-pages.ts). Optional sections are
+ * left out entirely when they have no content.
+ */
+import type { GetStaticPaths } from 'astro';
+import ProjectDetail from '../../components/project/ProjectDetail.astro';
+import { site } from '../../config/site';
+import BlogLayout from '../../layouts/BlogLayout.astro';
+import { getLatestRelease, getProjects, type ProjectPage } from '../../lib/projects';
+
+export const getStaticPaths = (async () => {
+  const { pages } = await getProjects();
+  return pages.map((page) => ({ params: { slug: page.slug }, props: { page } }));
+}) satisfies GetStaticPaths;
+
+const { page } = Astro.props as { page: ProjectPage };
+const { project, details, image } = page;
+const release = await getLatestRelease(project.name);
+
+const truncate = (text: string, max: number) => {
+  const clean = text.replace(/\s+/g, ' ').trim();
+  return clean.length <= max ? clean : `${clean.slice(0, max - 1).replace(/\s+\S*$/, '')}…`;
+};
+const description = truncate(project.description ?? `${project.title} – an open-source project by ${site.name}.`, 160);
+const url = new URL(page.path, site.url).href;
+
+const ogImage = details.hero
+  ? { src: details.hero.src, alt: details.hero.alt, width: details.hero.width, height: details.hero.height }
+  : image
+    ? { src: image.src, alt: image.alt }
+    : undefined;
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareSourceCode',
+    name: project.title,
+    description,
+    url,
+    codeRepository: project.url,
+    ...(project.language && { programmingLanguage: project.language }),
+    ...(ogImage && { image: new URL(ogImage.src, site.url).href }),
+    author: { '@type': 'Person', name: site.name, url: site.url },
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: new URL('/', site.url).href },
+      { '@type': 'ListItem', position: 2, name: 'Projects', item: new URL('/#projects', site.url).href },
+      { '@type': 'ListItem', position: 3, name: project.title, item: url },
+    ],
+  },
+];
+---
+
+<BlogLayout title={`${project.title} – ${site.name}`} description={description} image={ogImage}>
+  {/* JSON.stringify output, with "<" escaped so it can never close the script element */}
+  <script slot="head" type="application/ld+json" is:inline set:html={JSON.stringify(jsonLd).replace(/</g, '\\u003c')} />
+
+  <ProjectDetail page={page} release={release} />
+</BlogLayout>

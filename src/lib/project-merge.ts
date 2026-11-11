@@ -9,7 +9,10 @@
  * - Sanity documents only ever modify repositories GitHub returned; they never create cards.
  */
 import type { Accent, Category, CategoryId, FeaturedEntry, ProjectImage, ProjectOverride } from '../config/projects.ts';
+import type { ImageResolver } from './blog/normalize.ts';
 import type { RepoData } from './github.ts';
+import { normalizeProjectDetails, type ProjectDetails } from './project-details.ts';
+import { isValidProjectSlug } from './project-slug.ts';
 
 export interface Project {
   name: string;
@@ -24,6 +27,8 @@ export interface Project {
   fork: boolean;
   archived: boolean;
   featured: boolean;
+  /** Site-relative URL of the project's detail page, if it has one (set in src/lib/project-data.ts). */
+  detailPath?: string;
 }
 
 export interface FeaturedProject extends Project {
@@ -48,6 +53,12 @@ export interface EditorialOverride {
   featuredOrder?: number;
   accent?: Accent;
   image?: ProjectImage;
+  /** Stored detail page slug (validated). */
+  slug?: string;
+  /** `true` = the project has (had) a detail page; recorded by the Studio. */
+  detailPageEnabled?: boolean;
+  /** Detail page content; only present when an image resolver for details was given. */
+  details?: ProjectDetails;
 }
 
 export interface MergeConfig {
@@ -58,9 +69,18 @@ export interface MergeConfig {
   listSettings: { hideForks: boolean; hideArchived: boolean; exclude: string[] };
 }
 
+/** A rendered (not hidden, not excluded) repository with its resolved card presentation. */
+export interface VisibleEntry {
+  project: Project;
+  accent: Accent;
+  image?: ProjectImage;
+}
+
 export interface MergeResult {
   featured: FeaturedProject[];
   all: Project[];
+  /** Every rendered repository before the fork/archive list filters – input for detail pages. */
+  visible: VisibleEntry[];
   categories: Category[];
   warnings: string[];
 }
@@ -80,7 +100,11 @@ const has = <K extends keyof EditorialOverride>(o: EditorialOverride | undefined
  */
 export function normalizeSanityProject(
   raw: unknown,
-  { categoryIds, resolveImage }: { categoryIds: ReadonlySet<string>; resolveImage: (shot: unknown) => ProjectImage | null },
+  {
+    categoryIds,
+    resolveImage,
+    resolveDetailImage,
+  }: { categoryIds: ReadonlySet<string>; resolveImage: (shot: unknown) => ProjectImage | null; resolveDetailImage?: ImageResolver },
 ): { override: EditorialOverride | null; warnings: string[] } {
   const warnings: string[] = [];
   if (typeof raw !== 'object' || raw === null) return { override: null, warnings: ['Sanity project: not an object – skipped'] };
@@ -137,6 +161,20 @@ export function normalizeSanityProject(
     const image = resolveImage(d.screenshot);
     if (image) o.image = image;
     else invalid('screenshot');
+  }
+  if (present('slug')) {
+    const slug = typeof d.slug === 'object' && d.slug !== null ? (d.slug as { current?: unknown }).current : d.slug;
+    if (isValidProjectSlug(slug)) o.slug = slug;
+    else invalid('slug');
+  }
+  if (present('detailPageEnabled')) {
+    if (typeof d.detailPageEnabled === 'boolean') o.detailPageEnabled = d.detailPageEnabled;
+    else invalid('detailPageEnabled');
+  }
+  if (resolveDetailImage) {
+    const { details, warnings: detailWarnings } = normalizeProjectDetails(d, resolveDetailImage, `${label} (${o.repo})`);
+    warnings.push(...detailWarnings);
+    o.details = details;
   }
   return { override: o, warnings };
 }
@@ -219,12 +257,10 @@ export function mergeProjects(input: {
       featured,
     };
 
-    let image: ProjectImage | undefined;
-    if (featured) {
-      // Local screenshots are validated whenever the card is rendered, so a broken config still fails the build.
-      const localImage = f?.image ? resolveLocalImage(f.image, repo.name) : undefined;
-      image = has(s, 'image') ? s.image : localImage;
-    }
+    // Local screenshots are validated whenever the card is rendered, so a broken config still fails the build.
+    // Non-featured projects keep their Sanity screenshot for a detail page; the featured list only shows featured ones.
+    const localImage = featured && f?.image ? resolveLocalImage(f.image, repo.name) : undefined;
+    const image: ProjectImage | undefined = has(s, 'image') ? s.image : localImage;
     entries.push({
       project,
       accent: has(s, 'accent') ? s.accent : (f?.accent ?? category.accent),
@@ -263,5 +299,6 @@ export function mergeProjects(input: {
 
   const featured = featuredEntries.map(({ project, accent, image }) => ({ ...project, accent, ...(image && { image }) }));
   const used = new Set(all.map((p) => p.category.id));
-  return { featured, all, categories: config.categories.filter((c) => used.has(c.id)), warnings };
+  const visible = entries.map(({ project, accent, image }) => ({ project, accent, ...(image && { image }) }));
+  return { featured, all, visible, categories: config.categories.filter((c) => used.has(c.id)), warnings };
 }

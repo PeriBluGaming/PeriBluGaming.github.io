@@ -216,7 +216,11 @@ describe('project schema (Sanity)', { skip }, () => {
     it('has exactly the agreed fields', () => {
       assert.deepEqual(
         project.fields.map((f: { name: string; type: string }) => `${f.name}:${f.type}`),
-        ['repo:string', 'title:string', 'description:text', 'category:string', 'tags:array', 'hidden:boolean', 'featured:boolean', 'featuredOrder:number', 'accent:string', 'screenshots:array'],
+        [
+          'repo:string', 'title:string', 'description:text', 'category:string', 'tags:array', 'hidden:boolean', 'featured:boolean', 'featuredOrder:number', 'accent:string', 'screenshots:array',
+          // Detail pages: all optional, appended so existing documents and field order stay unchanged.
+          'slug:slug', 'detailPageEnabled:boolean', 'longDescription:blockContent', 'features:array', 'videos:array',
+        ],
       );
     });
 
@@ -237,7 +241,19 @@ describe('project schema (Sanity)', { skip }, () => {
       const [member] = field('screenshots').of;
       assert.equal(member.type, 'image');
       assert.equal(member.options.hotspot, true);
-      assert.deepEqual(member.fields.map((f: { name: string }) => f.name), ['alt']);
+      assert.deepEqual(member.fields.map((f: { name: string }) => f.name), ['alt', 'caption']);
+    });
+
+    it('puts the detail page fields in their own group, none of them required or pre-filled', () => {
+      for (const name of ['slug', 'detailPageEnabled', 'longDescription', 'features', 'videos']) {
+        assert.equal(field(name).group, 'page', name);
+        assert.equal('initialValue' in field(name), false, name);
+      }
+      assert.equal(field('detailPageEnabled').readOnly({ value: true }), true);
+      assert.equal(field('detailPageEnabled').readOnly({ value: undefined }), false);
+      assert.equal(field('slug').readOnly({ document: { detailPageEnabled: true, slug: { current: 'x' } } }), true);
+      assert.equal(field('slug').readOnly({ document: { slug: { current: 'x' } } }), false);
+      assert.equal(field('slug').options.slugify('ToyStory2Recomp'), 'toystory2recomp');
     });
   });
 
@@ -298,6 +314,46 @@ describe('project schema (Sanity)', { skip }, () => {
       assert.deepEqual(await errorsAt({ repo: 'X', featured: true, featuredOrder: -1 }), ['featuredOrder']);
       assert.deepEqual(await validate({ repo: 'X', featured: true, featuredOrder: 2 }), []);
       assert.deepEqual((await validate({ repo: 'X', featuredOrder: 2 })).map((m) => [m.level, m.path]), [['warning', 'featuredOrder']]);
+    });
+  });
+
+  describe('detail page fields (Sanity engine)', () => {
+    const feature = (extra: Record<string, unknown> = {}) => ({ _key: 'f1', _type: 'feature', title: 'Widescreen', ...extra });
+    const video = (url: string) => ({ _key: 'v1', _type: 'video', url });
+
+    it('accepts an existing document without any detail page field', async () => {
+      assert.deepEqual(await validate({ repo: 'ToyStory2Recomp', featured: true, screenshots: [image('Title screen')] }), []);
+    });
+
+    it('accepts a complete detail page', async () => {
+      const doc = {
+        repo: 'ToyStory2Recomp',
+        slug: { _type: 'slug', current: 'toystory2recomp' },
+        detailPageEnabled: true,
+        longDescription: [{ _key: 'b1', _type: 'block', style: 'normal', markDefs: [], children: [{ _key: 's1', _type: 'span', text: 'Hi', marks: [] }] }],
+        features: [feature({ description: 'Native 16:9.', icon: 'monitor' }), { ...feature({ image: image('Widescreen comparison') }), _key: 'f2' }],
+        videos: [video('https://youtu.be/dQw4w9WgXcQ')],
+        screenshots: [{ ...image('Title screen'), caption: 'The title screen' }],
+      };
+      assert.deepEqual(await validate(doc), []);
+    });
+
+    it('validates slugs and their uniqueness (other documents and the local detailPages)', async () => {
+      assert.deepEqual(await errorsAt({ repo: 'X', slug: { _type: 'slug', current: 'Toy Story' } }), ['slug']);
+      assert.deepEqual(await errorsAt({ repo: 'X', slug: { _type: 'slug', current: 'taken' } }, [{ _id: 'p2', slug: 'taken' }]), ['slug']);
+      assert.deepEqual(await errorsAt({ repo: 'X', slug: { _type: 'slug', current: 'taken' } }, [{ _id: 'p1', slug: 'taken' }]), []); // itself
+      assert.deepEqual(await errorsAt({ repo: 'X', slug: { _type: 'slug', current: 'toystory2recomp' } }), ['slug']); // local page of another repo
+    });
+
+    it('requires a feature title and alt text for feature images', async () => {
+      assert.deepEqual(await errorsAt({ repo: 'X', features: [feature({ title: undefined })] }), ['features.[].title']);
+      assert.deepEqual(await errorsAt({ repo: 'X', features: [feature({ image: image() })] }), ['features.[].image.alt']);
+    });
+
+    it('accepts only YouTube video links', async () => {
+      assert.deepEqual(await errorsAt({ repo: 'X', videos: [video('https://vimeo.com/123')] }), ['videos.[].url']);
+      assert.deepEqual(await errorsAt({ repo: 'X', videos: [{ _key: 'v1', _type: 'video' }] }), ['videos.[].url']);
+      assert.deepEqual(await errorsAt({ repo: 'X', videos: [video('https://www.youtube.com/watch?v=dQw4w9WgXcQ')] }), []);
     });
   });
 

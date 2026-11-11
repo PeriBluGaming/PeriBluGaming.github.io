@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { categories, defaultCategory, featuredProjects, listSettings, projectOverrides } from '../src/config/projects.ts';
+import { categories, defaultCategory, detailPages, featuredProjects, listSettings, projectOverrides } from '../src/config/projects.ts';
 import type { BlogConfig } from '../src/lib/blog/config.ts';
 import { GitHubApiError, type RepoData } from '../src/lib/github.ts';
 import { buildProjectData, type ProjectSources } from '../src/lib/project-data.ts';
@@ -33,6 +33,7 @@ function sources(overrides: Partial<ProjectSources> = {}): { s: ProjectSources; 
         ? { src: 'https://cdn.sanity.io/images/abc123xy/production/x.webp?w=800', alt: (shot as { alt: string }).alt, position: '50% 20%' }
         : null,
     resolveLocalImage: (image, repo) => validateProjectImage(image, repo, join(root, 'public')),
+    detailPages,
     log: { warn: (m: string) => warnings.push(m) },
     ...overrides,
   };

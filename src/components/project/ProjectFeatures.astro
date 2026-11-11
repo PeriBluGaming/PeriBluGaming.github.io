@@ -1,0 +1,72 @@
+---
+/** Key feature cards: two columns from md, one on mobile. Image, else the chosen icon, else a neutral icon. */
+import type { ProjectFeature } from '../../lib/project-details';
+import Icon from '../Icon.astro';
+import PostImage from '../blog/PostImage.astro';
+
+interface Props {
+  features: ProjectFeature[];
+}
+
+const { features } = Astro.props;
+---
+
+<ul class="grid gap-6 md:grid-cols-2">
+  {
+    features.map((feature) => (
+      <li class="feature">
+        {feature.image ? (
+          <PostImage image={feature.image} sizes="(min-width: 768px) 540px, 100vw" class="feature-img" />
+        ) : (
+          <span class="feature-icon" aria-hidden="true">
+            <Icon name={feature.icon ?? 'gamepad'} class="size-6" />
+          </span>
+        )}
+        <div class="feature-body">
+          <h3 class="text-lg leading-snug font-bold">{feature.title}</h3>
+          {feature.description && <p class="mt-2 text-[0.95rem] leading-relaxed text-muted">{feature.description}</p>}
+        </div>
+      </li>
+    ))
+  }
+</ul>
+
+<style>
+  .feature {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: var(--radius-card);
+    border: 1px solid var(--color-line);
+    background: linear-gradient(180deg, #121628 0%, #0d1020 100%);
+    transition:
+      border-color 0.25s,
+      box-shadow 0.25s;
+  }
+  .feature:hover {
+    border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+    box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 16%, transparent);
+  }
+  .feature :global(.feature-img) {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border-bottom: 1px solid var(--color-line);
+  }
+  .feature-icon {
+    display: inline-grid;
+    place-items: center;
+    width: 3rem;
+    height: 3rem;
+    margin: 1.5rem 1.5rem 0;
+    border-radius: 10px;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+  .feature-body {
+    padding: 1.25rem 1.5rem 1.5rem;
+  }
+</style>
