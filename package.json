@@ -16,6 +16,7 @@
     "migrate:projects:preflight": "node --env-file-if-exists=.env scripts/sanity-project-migration.ts preflight",
     "migrate:projects:execute": "node --env-file-if-exists=.env scripts/sanity-project-migration.ts execute",
     "test": "node --test \"tests/**/*.test.ts\"",
+    "validate:dist": "node scripts/validate-dist.ts",
     "astro": "astro"
   },
   "dependencies": {
