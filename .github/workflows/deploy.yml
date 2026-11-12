@@ -1,7 +1,8 @@
 # Builds the site and deploys it to GitHub Pages. Details: docs/deployment.md
 #
-# - schedule, every 15 minutes: rebuilds only if the code on main or the visible Sanity content differs from what
-#   the live site was built from (/build-info.json). Drafts never trigger a build.
+# - schedule, every 15 minutes: rebuilds only if the code on main, the visible Sanity content or the latest GitHub
+#   release of a project with a detail page differs from what the live site was built from (/build-info.json,
+#   /projects/pages.json). Drafts never trigger a build.
 # - schedule, daily 03:17 UTC: always rebuilds – refreshes the GitHub project cards (stars, dates, new repositories).
 # - workflow_dispatch (manual): always rebuilds.
 # Production deploys only from main: job conditions here + the branch policy of the "github-pages" environment.
@@ -47,13 +48,15 @@ jobs:
         with:
           node-version-file: .nvmrc
 
-      # Plain Node, no dependencies needed. Fails (instead of reporting "no changes") if Sanity can't be read.
-      # Manual runs and the daily cron always build; the 15-minute cron only on changes.
+      # Plain Node, no dependencies needed. Fails (instead of reporting "no changes") if Sanity or the GitHub
+      # releases can't be read. Manual runs and the daily cron always build; the 15-minute cron only on changes.
       - id: check
         run: node scripts/deploy-check.ts check
         env:
           EVENT_NAME: ${{ github.event_name }}
           EVENT_SCHEDULE: ${{ github.event.schedule }}
+          # Built-in, read-only workflow token – only for reading the projects' latest releases (rate limit).
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build:
     needs: check
@@ -65,6 +68,7 @@ jobs:
     outputs:
       commit: ${{ steps.built.outputs.commit }}
       content_hash: ${{ steps.built.outputs.content_hash }}
+      manifest: ${{ steps.built.outputs.manifest }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -84,7 +88,8 @@ jobs:
           # SANITY_PROJECT_ID / SANITY_DATASET come from the workflow-level env (shared with the check and the gate).
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Requires a content fingerprint in dist/build-info.json (otherwise every check would rebuild again).
+      # Requires a content fingerprint in dist/build-info.json (otherwise every check would rebuild again) and runs the
+      # page guard: no published project page may disappear or change its URL (docs/project-pages.md).
       - id: built
         run: node scripts/deploy-check.ts built
 
@@ -113,12 +118,14 @@ jobs:
           node-version-file: .nvmrc
 
       # Last gate, inside this job so it also applies when only this job is re-run: deploy only if main has not
-      # moved on and the Sanity content has not changed since the build. Older runs can't overwrite newer deploys.
+      # moved on and the Sanity content has not changed since the build, and the page guard still passes against the
+      # live site. Older runs can't overwrite newer deploys.
       - id: gate
         run: node scripts/deploy-check.ts verify
         env:
           BUILT_COMMIT: ${{ needs.build.outputs.commit }}
           BUILT_CONTENT_HASH: ${{ needs.build.outputs.content_hash }}
+          BUILT_MANIFEST: ${{ needs.build.outputs.manifest }}
 
       - id: deployment
         if: steps.gate.outputs.deploy == 'true'

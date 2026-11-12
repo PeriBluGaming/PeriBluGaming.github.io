@@ -1,0 +1,165 @@
+---
+/**
+ * YouTube videos: the first one large, the others below. Privacy: nothing is requested from YouTube or Google until
+ * the visitor clicks play – the placeholder uses local styling only (the featured one shows the project's own hero
+ * image). The player is then loaded from youtube-nocookie.com; autoplay only follows that explicit click.
+ * Without JavaScript, the "Watch on YouTube" link still works.
+ */
+import type { ProjectVideo } from '../../lib/project-details';
+import { youTubeEmbedUrl, youTubeWatchUrl } from '../../lib/youtube';
+import Icon from '../Icon.astro';
+
+interface Props {
+  videos: ProjectVideo[];
+  projectTitle: string;
+  /** Local or Sanity CDN image used behind the featured video's play button. */
+  poster?: string;
+}
+
+const { videos, projectTitle, poster } = Astro.props;
+const label = (v: ProjectVideo, i: number) => v.title ?? `${projectTitle} – video ${i + 1}`;
+---
+
+<div class="videos" data-videos>
+  {
+    videos.map((video, i) => (
+      <div class:list={['video', { 'video-featured': i === 0 }]} data-video>
+        <div class="frame" data-embed={youTubeEmbedUrl(video.id)} data-title={label(video, i)}>
+          <button type="button" class="play" data-play>
+            {i === 0 && poster && <img src={poster} alt="" class="poster" loading="lazy" decoding="async" />}
+            <span class="play-icon" aria-hidden="true">
+              <Icon name="youtube" class={i === 0 ? 'size-16' : 'size-12'} />
+            </span>
+            <span class="sr-only">Play video: </span>
+            <span class="play-title">{label(video, i)}</span>
+            <span class="play-note">Loads the YouTube player (youtube-nocookie.com)</span>
+          </button>
+        </div>
+        <a href={youTubeWatchUrl(video.id)} class="watch link-arrow" target="_blank" rel="noopener noreferrer">
+          Watch on YouTube
+          <Icon name="arrow-right" class="size-4" />
+          <span class="sr-only">: {label(video, i)} (opens in a new tab)</span>
+        </a>
+      </div>
+    ))
+  }
+</div>
+
+<script>
+  // Accepts only the exact privacy-enhanced embed URL format the server rendered.
+  const EMBED = /^https:\/\/www\.youtube-nocookie\.com\/embed\/[A-Za-z0-9_-]{11}\?autoplay=1&rel=0$/;
+
+  for (const frame of document.querySelectorAll<HTMLElement>('[data-videos] [data-embed]')) {
+    frame.querySelector('[data-play]')?.addEventListener('click', () => {
+      const src = frame.dataset.embed ?? '';
+      if (!EMBED.test(src)) return;
+      const iframe = document.createElement('iframe');
+      iframe.src = src;
+      iframe.title = frame.dataset.title ?? 'YouTube video';
+      iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+      iframe.allowFullscreen = true;
+      iframe.referrerPolicy = 'strict-origin-when-cross-origin';
+      frame.replaceChildren(iframe);
+      iframe.focus();
+    });
+  }
+</script>
+
+<style>
+  .videos {
+    display: grid;
+    gap: 1.75rem 1.5rem;
+  }
+  @media (min-width: 640px) {
+    .videos {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 1024px) {
+    .videos {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  .video-featured {
+    grid-column: 1 / -1;
+  }
+  .frame {
+    position: relative;
+    overflow: hidden;
+    aspect-ratio: 16 / 9;
+    border-radius: var(--radius-card);
+    border: 1px solid var(--color-line);
+    background:
+      radial-gradient(60% 80% at 50% 45%, color-mix(in srgb, var(--accent) 16%, transparent) 0%, transparent 70%),
+      linear-gradient(180deg, #121628 0%, #0d1020 100%);
+  }
+  .video-featured .frame {
+    border: 1.5px solid color-mix(in srgb, var(--accent) 70%, transparent);
+    box-shadow: 0 0 22px color-mix(in srgb, var(--accent) 18%, transparent);
+  }
+  .frame :global(iframe) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+  .play {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    width: 100%;
+    padding: 1rem;
+    color: #fff;
+    text-align: center;
+    cursor: pointer;
+  }
+  .play:focus-visible {
+    outline-offset: -4px;
+  }
+  .poster {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.35;
+    transition: opacity 0.25s;
+  }
+  .play:hover .poster {
+    opacity: 0.45;
+  }
+  .play-icon,
+  .play-title,
+  .play-note {
+    position: relative;
+  }
+  .play-icon {
+    color: var(--color-neon-pink);
+    filter: drop-shadow(0 0 12px rgb(242 53 165 / 0.5));
+    transition: transform 0.25s;
+  }
+  .play:hover .play-icon {
+    transform: scale(1.08);
+  }
+  .play-title {
+    max-width: 36rem;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+  .video-featured .play-title {
+    font-size: 1.25rem;
+  }
+  .play-note {
+    font-size: 0.75rem;
+    color: var(--color-muted);
+  }
+  .watch {
+    margin-top: 0.75rem;
+    font-size: 0.9rem;
+  }
+</style>

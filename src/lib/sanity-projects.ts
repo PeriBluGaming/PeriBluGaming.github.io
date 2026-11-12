@@ -14,7 +14,8 @@ type SanityConfig = Extract<BlogConfig, { mode: 'sanity' }>;
 
 /**
  * All published project documents (root IDs only: no drafts.*, no versions.*), in a stable order, with an explicit
- * projection. Only the first screenshot is needed for the featured card. `_rev` feeds the deploy fingerprint.
+ * projection. The first screenshot is the card / hero image; all screenshots, the long description, features and
+ * videos feed the detail page. `_rev` feeds the deploy fingerprint (it covers every field, so no fingerprint change).
  */
 export const PROJECTS_QUERY = /* groq */ `
 *[${PROJECT_DOCUMENT_FILTER}] | order(_id asc) {
@@ -30,7 +31,21 @@ export const PROJECTS_QUERY = /* groq */ `
   featured,
   featuredOrder,
   accent,
-  "screenshot": screenshots[0]{ alt, crop, hotspot, asset->{ _id, url, metadata { dimensions { width, height } } } }
+  "screenshot": screenshots[0]{ alt, crop, hotspot, asset->{ _id, url, metadata { dimensions { width, height } } } },
+  slug,
+  detailPageEnabled,
+  "screenshots": screenshots[]{ _key, alt, caption, crop, hotspot, asset->{ _id, url, metadata { dimensions { width, height } } } },
+  longDescription[] {
+    _type == "block" => {
+      _key, _type, style, listItem, level,
+      children[]{ _key, _type, text, marks },
+      markDefs[]{ _key, _type, href, _type == "internalLink" => { "slug": reference->slug.current } }
+    },
+    _type == "image" => { _key, _type, alt, caption, crop, hotspot, asset->{ _id, url, metadata { dimensions { width, height } } } },
+    _type == "codeBlock" => { _key, _type, code, language }
+  },
+  features[]{ _key, title, description, icon, image{ alt, crop, hotspot, asset->{ _id, url, metadata { dimensions { width, height } } } } },
+  videos[]{ _key, url, title }
 }`;
 
 export async function fetchSanityProjects(config: SanityConfig): Promise<unknown> {

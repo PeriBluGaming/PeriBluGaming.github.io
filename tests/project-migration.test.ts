@@ -28,7 +28,7 @@ import { MigrationAbort, collectInputs, readOnlySanityFetch, validateWithStudioS
 const root = fileURLToPath(new URL('..', import.meta.url));
 const { categories, defaultCategory, featuredProjects, listSettings, projectOverrides } = projectConfig;
 const config: MergeConfig = { categories, defaultCategory, projectOverrides, featuredProjects, listSettings };
-const fallback = JSON.parse(readFileSync(join(root, 'src/data/fallback-repos.json'), 'utf8')) as { fetchedAt: string; repos: RepoData[] };
+const fallback = JSON.parse(readFileSync(join(root, 'tests/fixtures/fallback-repos-2026-11-02.json'), 'utf8')) as { fetchedAt: string; repos: RepoData[] };
 const resolveLocalImage = (image: Parameters<typeof validateProjectImage>[0], repo: string) => validateProjectImage(image, repo, join(root, 'public'));
 const studioReady = existsSync(join(root, 'studio/node_modules/sanity/package.json'));
 
@@ -37,6 +37,7 @@ const repo = (name: string, extra: Partial<RepoData> = {}): RepoData => ({
   fork: false, archived: false, pushedAt: '2026-11-03T16:10:16Z', topics: [], ...extra,
 });
 /** Current public inventory: the snapshot plus the two repositories published since. */
+// Frozen snapshot (as of 2026-11-02, without SledStorm): the migration plan was reviewed against this inventory.
 const inventory: RepoData[] = [...fallback.repos, repo('SledStormPSXRecomp'), repo('PeriBluGaming.github.io', { language: 'Astro' })];
 const CURRENT_FEATURED = ['ToyStory2Recomp', 'BugsBunnyLostinTimeRecomp', 'RescueShotRecomp', 'SuperMarioWorld2YoshisIslandRecomp', 'romm2switch'];
 

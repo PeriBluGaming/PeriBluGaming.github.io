@@ -1,0 +1,83 @@
+{
+  "user": "PeriBluGaming",
+  "fetchedAt": "2026-11-02T09:04:56.950Z",
+  "repos": [
+    {
+      "name": "ToyStory2Recomp",
+      "url": "https://github.com/PeriBluGaming/ToyStory2Recomp",
+      "description": "Toy Story 2 - Buzz Lightyear so the Rescue (USA)! recompiled for the Sony PlayStation using psxrecomp · Part of the R.A.I.D. community",
+      "language": "C",
+      "stars": 16,
+      "fork": false,
+      "archived": false,
+      "pushedAt": "2026-10-31T22:32:06Z",
+      "topics": []
+    },
+    {
+      "name": "SuperMarioWorld2YoshisIslandRecomp",
+      "url": "https://github.com/PeriBluGaming/SuperMarioWorld2YoshisIslandRecomp",
+      "description": "Super Mario World 2 Yoshi's Island for the Super Nintendo using snesrecomp",
+      "language": null,
+      "stars": 0,
+      "fork": true,
+      "archived": false,
+      "pushedAt": "2026-10-29T19:00:10Z",
+      "topics": []
+    },
+    {
+      "name": "RescueShotRecomp",
+      "url": "https://github.com/PeriBluGaming/RescueShotRecomp",
+      "description": "RescueShot Recompiled brings the PlayStation light-gun shooter Rescue Shot to modern PCs through static recompilation powered by PSXRecomp.",
+      "language": "C",
+      "stars": 0,
+      "fork": false,
+      "archived": false,
+      "pushedAt": "2026-10-28T00:27:01Z",
+      "topics": []
+    },
+    {
+      "name": "psxrecomp",
+      "url": "https://github.com/PeriBluGaming/psxrecomp",
+      "description": "Sony PlayStation game static recompiler ecosystem · Part of the R.A.I.D. community",
+      "language": null,
+      "stars": 0,
+      "fork": true,
+      "archived": false,
+      "pushedAt": "2026-10-27T21:34:45Z",
+      "topics": []
+    },
+    {
+      "name": "recomp-ui",
+      "url": "https://github.com/PeriBluGaming/recomp-ui",
+      "description": "Shared launcher and in-game UI for static recompilation projects · Part of the R.A.I.D. community",
+      "language": null,
+      "stars": 0,
+      "fork": true,
+      "archived": false,
+      "pushedAt": "2026-10-27T21:20:33Z",
+      "topics": []
+    },
+    {
+      "name": "BugsBunnyLostinTimeRecomp",
+      "url": "https://github.com/PeriBluGaming/BugsBunnyLostinTimeRecomp",
+      "description": "Bugs Bunny: Lost in Time (USA, SLUS-00838) statically recompiled to a native PC executable with PSXRecomp.",
+      "language": "C",
+      "stars": 4,
+      "fork": false,
+      "archived": false,
+      "pushedAt": "2026-10-26T01:51:24Z",
+      "topics": []
+    },
+    {
+      "name": "romm2switch",
+      "url": "https://github.com/PeriBluGaming/romm2switch",
+      "description": "A Nintendo Switch homebrew application (NRO) that connects to your self-hosted RomM installation and lets you browse and download ROMs directly to your SD card.",
+      "language": "C++",
+      "stars": 8,
+      "fork": false,
+      "archived": false,
+      "pushedAt": "2026-10-01T18:23:11Z",
+      "topics": []
+    }
+  ]
+}

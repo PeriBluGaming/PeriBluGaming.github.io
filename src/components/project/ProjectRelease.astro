@@ -1,0 +1,50 @@
+---
+/** Latest published GitHub release: version, date and a link to the release page. No assets, no history. */
+import type { LatestRelease } from '../../lib/projects';
+import { formatDate } from '../../lib/format';
+import Icon from '../Icon.astro';
+
+interface Props {
+  release: LatestRelease;
+}
+
+const { release } = Astro.props;
+---
+
+<div class="release">
+  <div>
+    <p class="text-xs font-bold tracking-[0.14em] text-muted uppercase">Version</p>
+    <p class="mt-1 text-2xl font-bold">{release.version}</p>
+    {release.name && <p class="mt-1 text-muted">{release.name}</p>}
+    {
+      release.publishedAt && (
+        <p class="mt-2 text-sm text-muted">
+          Published <time datetime={release.publishedAt}>{formatDate(release.publishedAt)}</time>
+        </p>
+      )
+    }
+  </div>
+  <a href={release.url} class="link-arrow" target="_blank" rel="noopener">
+    <Icon name="github" class="size-5 text-white" />
+    View release on GitHub
+    <Icon name="arrow-right" class="size-4" />
+    <span class="sr-only">(opens in a new tab)</span>
+  </a>
+</div>
+
+<style>
+  .release {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.25rem 2rem;
+    padding: 1.5rem 1.75rem;
+    border-radius: var(--radius-card);
+    border: 1.5px solid color-mix(in srgb, var(--accent) 70%, transparent);
+    background:
+      radial-gradient(50% 120% at 0% 50%, color-mix(in srgb, var(--accent) 12%, transparent) 0%, transparent 70%),
+      linear-gradient(180deg, #121628 0%, #0d1020 100%);
+    box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 18%, transparent);
+  }
+</style>

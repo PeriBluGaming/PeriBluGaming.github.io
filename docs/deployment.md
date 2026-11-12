@@ -13,7 +13,7 @@ the decision is made in `forceReason()` (`src/lib/deploy-check.ts`), the cron ex
 workflow by a test.
 
 No secrets are involved. Sanity is read without a token (public dataset); the only credential is the built-in
-`GITHUB_TOKEN`. Design and alternatives: [publishing-pipeline.md](publishing-pipeline.md).
+`GITHUB_TOKEN` (build: repository list and releases; check: the projects' latest releases). Design and alternatives: [publishing-pipeline.md](publishing-pipeline.md).
 
 ## How a change goes live
 
@@ -31,6 +31,11 @@ A rebuild happens when **any** of these differ from the live `/build-info.json`:
 - the **content fingerprint** – SHA-256 over type, ID and revision (`_rev`) of every *visible* Sanity document
   (posts and projects, fingerprint version 2);
 - the live file is missing (first publication), unreadable or in an older format.
+- the **latest GitHub release** of a project with a detail page (compared by release ID against the live
+  `/projects/pages.json`) – only checked when code and content are unchanged; a failed lookup fails the check.
+
+Before deploying, the **page guard** refuses any build that would remove a published project page, change its URL or
+erase its release information: [project-pages.md](project-pages.md#the-page-manifest-and-the-page-guard).
 
 Typical delay from "Publish" in the Studio to live: **≈ 5–25 minutes** (interval + scheduling delay + 2–3 minutes
 build and deploy). Need it now? Start the workflow manually.

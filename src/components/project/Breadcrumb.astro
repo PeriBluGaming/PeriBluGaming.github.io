@@ -1,0 +1,44 @@
+---
+/** Breadcrumb trail: Home / Projects / <title>. The current page is the last item, marked aria-current. */
+interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+---
+
+<nav aria-label="Breadcrumb" class="breadcrumb">
+  <ol>
+    <li><a href="/">Home</a></li>
+    <li><a href="/#projects">Projects</a></li>
+    <li><span aria-current="page">{title}</span></li>
+  </ol>
+</nav>
+
+<style>
+  .breadcrumb ol {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0;
+    font-size: 0.875rem;
+    color: var(--color-muted);
+  }
+  .breadcrumb li + li::before {
+    content: '/';
+    margin-inline: 0.6rem;
+    color: var(--color-neon-violet);
+  }
+  .breadcrumb a {
+    color: var(--color-neon-cyan);
+    font-weight: 600;
+    transition: color 0.2s;
+  }
+  .breadcrumb a:hover {
+    color: #fff;
+  }
+  .breadcrumb [aria-current] {
+    color: #fff;
+    font-weight: 600;
+  }
+</style>

@@ -1,0 +1,78 @@
+---
+/** Body of a project detail page: breadcrumb, hero and the optional sections (each hidden when empty). */
+import type { LatestRelease, ProjectPage } from '../../lib/projects';
+import PostBody from '../blog/PostBody.astro';
+import Breadcrumb from './Breadcrumb.astro';
+import ProjectFeatures from './ProjectFeatures.astro';
+import ProjectGallery from './ProjectGallery.astro';
+import ProjectHero from './ProjectHero.astro';
+import ProjectRelease from './ProjectRelease.astro';
+import ProjectSection from './ProjectSection.astro';
+import ProjectVideos from './ProjectVideos.astro';
+
+interface Props {
+  page: ProjectPage;
+  release: LatestRelease | null;
+}
+
+const { page, release } = Astro.props;
+const { project, details, image } = page;
+const poster = details.hero?.src ?? image?.src;
+const hasAbout = details.longDescription.length > 0 || Boolean(project.description);
+---
+
+  <article class:list={['container-site pb-20', `accent-${page.accent}`]} aria-labelledby="project-title">
+    <div class="mx-auto max-w-[1120px]">
+      <Breadcrumb title={project.title} />
+
+      <div class="mt-6">
+        <ProjectHero page={page} release={release} />
+      </div>
+
+      {
+        hasAbout && (
+          <ProjectSection id="about-project" title="About the Project">
+            <div class="max-w-[760px]">
+              {details.longDescription.length > 0 ? (
+                <PostBody body={details.longDescription} />
+              ) : (
+                <p class="text-[1.0625rem] leading-relaxed text-[#d9deea]">{project.description}</p>
+              )}
+            </div>
+          </ProjectSection>
+        )
+      }
+
+      {
+        details.features.length > 0 && (
+          <ProjectSection id="key-features" title="Key Features">
+            <ProjectFeatures features={details.features} />
+          </ProjectSection>
+        )
+      }
+
+      {
+        details.gallery.length > 0 && (
+          <ProjectSection id="screenshots" title="Screenshots">
+            <ProjectGallery images={details.gallery} />
+          </ProjectSection>
+        )
+      }
+
+      {
+        details.videos.length > 0 && (
+          <ProjectSection id="videos" title="Gameplay & Videos">
+            <ProjectVideos videos={details.videos} projectTitle={project.title} poster={poster} />
+          </ProjectSection>
+        )
+      }
+
+      {
+        release && (
+          <ProjectSection id="latest-release" title="Latest Release">
+            <ProjectRelease release={release} />
+          </ProjectSection>
+        )
+      }
+    </div>
+  </article>

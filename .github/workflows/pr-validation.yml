@@ -1,0 +1,97 @@
+# Validates pull requests into main: tests, type checks, an offline website build with a consistency check of the
+# generated project pages, and the Sanity Studio type check + production bundle. Read-only – deploys nothing.
+#
+# Safety:
+# - `pull_request` (never `pull_request_target`): forked PRs run with a read-only token and without secrets.
+# - permissions: contents: read only. No pages/id-token permissions, no secrets, no deployment actions.
+# - The site is built OFFLINE (see the build step): no GitHub API, no Sanity, no live-site requests. The production
+#   deploy gate (scripts/deploy-check.ts) is not run – it compares against the live site and is deployment-only.
+# - The Studio is only built into a temporary folder, never deployed.
+name: PR validation
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+# One run per pull request; a new push cancels the outdated run. Separate from the "pages" deploy group.
+concurrency:
+  group: pr-validation-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            studio/package-lock.json
+
+      - name: Install website dependencies
+        run: npm ci
+        timeout-minutes: 5
+
+      # Installed before the tests: the Studio schema tests are skipped without them.
+      - name: Install Studio dependencies
+        run: npm ci
+        working-directory: studio
+        timeout-minutes: 5
+
+      # Fails on any failing test, and also if a test was skipped (e.g. missing Studio dependencies).
+      - name: Tests
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee "$RUNNER_TEMP/test.log"
+          grep -Eq '^(# |ℹ )skipped 0$' "$RUNNER_TEMP/test.log" || { echo "::error::Tests were skipped or the summary is missing."; exit 1; }
+        timeout-minutes: 5
+
+      # `npm run build` = astro check (TypeScript + Astro diagnostics) + astro build.
+      # Offline configuration:
+      #   GITHUB_OFFLINE=1          repositories from src/data/fallback-repos.json, no release requests
+      #   PAGES_MANIFEST_OFFLINE=1  no request for the live /projects/pages.json
+      #   SANITY_PROJECT_ID=""      Sanity disabled: no posts, local project configuration only
+      #   ASTRO_TELEMETRY_DISABLED  no request to Astro's telemetry endpoint
+      # GITHUB_TOKEN is deliberately not passed.
+      - name: Type check and offline build
+        run: npm run build
+        env:
+          ASTRO_TELEMETRY_DISABLED: '1'
+          GITHUB_OFFLINE: '1'
+          PAGES_MANIFEST_OFFLINE: '1'
+          SANITY_PROJECT_ID: ''
+          SANITY_DATASET: ''
+        timeout-minutes: 5
+
+      - name: Validate generated pages and manifest
+        run: npm run validate:dist
+        timeout-minutes: 2
+
+      - name: Studio type check
+        run: npm run typecheck
+        working-directory: studio
+        timeout-minutes: 3
+
+      # Public project ID and dataset (also in studio/.env.example) – not secrets. Output goes to a temporary folder;
+      # `sanity deploy` is never run.
+      - name: Studio production bundle (not deployed)
+        run: npm run build -- "$RUNNER_TEMP/studio-dist" --yes
+        working-directory: studio
+        env:
+          SANITY_STUDIO_PROJECT_ID: hyyn359x
+          SANITY_STUDIO_DATASET: production
+        timeout-minutes: 5

@@ -13,6 +13,6 @@
     "resolveJsonModule": true,
     "types": []
   },
-  "include": ["**/*.ts", "**/*.tsx", "../src/config/blog.ts", "../src/config/projects.ts"],
+  "include": ["**/*.ts", "**/*.tsx", "../src/config/blog.ts", "../src/config/projects.ts", "../src/lib/project-slug.ts", "../src/lib/youtube.ts"],
   "exclude": ["node_modules", "dist"]
 }

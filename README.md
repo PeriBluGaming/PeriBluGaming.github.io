@@ -32,6 +32,8 @@ npm install
   Adding screenshots: [docs/project-screenshots.md](docs/project-screenshots.md).
 - `src/config/site.ts` – site metadata and social links (`enabled: false` = hidden).
 - `src/data/fallback-repos.json` – real API snapshot used when GitHub is unreachable or rate-limited.
+- Project detail pages (`/projects/<slug>/`), their Sanity fields and how activation persists:
+  [docs/project-pages.md](docs/project-pages.md).
 
 ## Blog (Sanity CMS)
 
